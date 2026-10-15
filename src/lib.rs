@@ -6,4 +6,3 @@ pub mod funktionen;
 pub mod konfig;
 pub mod protokoll;
 pub mod speicher;
-pub mod windows;

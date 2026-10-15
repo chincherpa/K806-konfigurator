@@ -19,6 +19,3 @@ clap = { version = "4", features = ["derive"] }
 hidapi = "2.6"
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
-
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging"] }

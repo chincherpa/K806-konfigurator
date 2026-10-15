@@ -28,9 +28,7 @@ const tasten = [7, 3, 2, 1, 9, 6, 5, 4].map((s, i) => ({ name: `t${i + 1}`, stec
 const konfiguration = {
   geraet: { vendor_id: 0x30fa, product_id: 0x1340, bericht_laenge: 8 },
   allgemein: { aktives_profil: 1, abfragerate_hz: 1000, dauerfeuer_ms: 48 },
-  dpi: {},
   beleuchtung: { modus: "dauerlicht", helligkeit: 4, geschwindigkeit: 3 },
-  windows: {},
   taste: tasten,
   profil: [
     {

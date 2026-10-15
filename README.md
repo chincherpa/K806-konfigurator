@@ -47,8 +47,8 @@ Siehe [`konfiguration.toml`](konfiguration.toml): drei Beispielprofile (Ziffern 
 * `[[profil]]` – bis zu 3 Profile
 * `[erweitert]` – unbekannte Felder und direkte Speicherbytes
 
-Die Firmware stammt aus einer Gaming-Maus; DPI-Einstellungen (`[dpi]`) werden deshalb
-mitgesendet, haben aber keine Wirkung und können weggelassen werden.
+Die Firmware stammt aus einer Gaming-Maus. Deren DPI-Bereich im Speicher wird fest mit den
+Standardwerten des Originals beschrieben und ist nicht konfigurierbar.
 
 ## Nicht unterstützt
 

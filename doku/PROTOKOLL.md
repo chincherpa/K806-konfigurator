@@ -52,16 +52,16 @@ Byte 7  Blocklänge − 1
 | `0x01` | `Profil<<5 \| 3` |
 | `0x08–0x0F` | Profil 1, Steckplatz 1–8 |
 | `0x10` | Profil 1, Steckplatz 9 |
-| `0x13` | Bit 4 der sechs DPI-Codes (Bit *i* = Stufe *i*) |
+| `0x13` | Bit 4 der sechs DPI-Codes (Bit *i* = Stufe *i*) – DPI-Bereich fest `38 08 6C F2 02 18` (Maus, ohne Wirkung) |
 | `0x14` | konstant `0x08` |
 | `0x15–0x17` | DPI-Codes, je zwei Nibble (Stufe 1/2, 3/4, 5/6) |
 | `0x18` | `0x18 \| (aktive DPI-Stufe − 1)` |
 | `0x19` | 4 Bits: Farben im Farbzyklus |
 | `0x1A–0x1B` | Dauerfeuer-Intervall / 8 (LE16) |
 | `0x1C` | LED: `0x80 \| Modus<<4 \| Tastenreaktion<<3 \| Tempo` |
-| `0x1D` | DPI-Stufe aktiv (Bits 0,2,4,6 für Stufe 1–4) \| Benutzerfarbe<<7 |
+| `0x1D` | DPI-Stufe aktiv (Bits 0,2,4,6 für Stufe 1–4, fest `0x55`) \| Benutzerfarbe<<7 |
 | `0x1E` | Abfragerate-Code (0–3) |
-| `0x20–0x31` | DPI-Farben: 6 × (R,G,B), je 4 Bit |
+| `0x20–0x31` | DPI-Farben: 6 × (R,G,B), je 4 Bit (fest, Standardwerte des Originals) |
 | `0x32–0x33` | konstant `07 30` |
 | `0x3A` | LED-Effekte: Einzelfarbe<<7 \| Symmetrie<<6 \| Richtung<<4 \| unbekanntes Nibble |
 | `0x3B–0x3C` | Profil 1, Steckplatz 10–11 |
@@ -109,12 +109,11 @@ Byte 7  Blocklänge − 1
 ## Nicht in der Maus gespeichert
 
 „Zeigergenauigkeit“ (`DPI_SPEED`) und „Mausrad-Geschwindigkeit“ (`WHEEL_SPEED`) setzt das Original
-per `SystemParametersInfo(SPI_SETMOUSESPEED / SPI_SETWHEELSCROLLLINES)` in Windows.
+per `SystemParametersInfo(SPI_SETMOUSESPEED / SPI_SETWHEELSCROLLLINES)` in Windows – hier nicht umgesetzt.
 
 ## Unsicherheiten
 
 * **Abfragerate**: Code 0–3 ist sicher, die Zuordnung 0 = 1000 Hz … 3 = 125 Hz ist abgeleitet, nicht gemessen.
-* **DPI-Werte**: Der Code (0–16) ist sicher, die zugehörige echte DPI-Zahl nicht.
 * **LED-Modus**: Reihenfolge stammt aus der Auswahlliste des Originals
   (DPI breath, Cycle breath, Constantly, Button response, Mute, Single Breath).
 * **Lesen**: Der Leseablauf ist aus dem Original übernommen, wurde aber nur für 0x76 beobachtet.

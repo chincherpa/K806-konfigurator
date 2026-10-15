@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use anyhow::{bail, Context, Result};
+use serde::de::IgnoredAny;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -14,17 +15,18 @@ pub struct Konfiguration {
     #[serde(default)]
     pub allgemein: Allgemein,
     #[serde(default)]
-    pub dpi: Dpi,
-    #[serde(default)]
     pub beleuchtung: Beleuchtung,
-    #[serde(default)]
-    pub windows: WindowsEinstellungen,
     /// Physische Tasten: Name -> Hardware-Steckplatz (1–11)
     pub taste: Vec<Taste>,
     /// 1–3 Profile (wie im Original; Hardware-Profil 2 bleibt ungenutzt)
     pub profil: Vec<Profil>,
     #[serde(default)]
     pub erweitert: Erweitert,
+    /// Frühere Maus-Abschnitte `[dpi]` und `[windows]` – werden beim Laden ignoriert
+    #[serde(default, rename = "dpi", skip_serializing)]
+    pub(crate) alt_dpi: IgnoredAny,
+    #[serde(default, rename = "windows", skip_serializing)]
+    pub(crate) alt_windows: IgnoredAny,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -62,50 +64,11 @@ impl Default for Allgemein {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(deny_unknown_fields, default)]
-pub struct Dpi {
-    /// Beim Einschalten aktive DPI-Stufe (1–6)
-    pub aktive_stufe: u8,
-    pub stufe: Vec<DpiStufe>,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct DpiStufe {
-    /// Sensorwert 0–16 (wie DPI_SET im Original; 0 = niedrigste Auflösung)
-    pub wert: u8,
-    #[serde(default = "wahr")]
-    pub aktiv: bool,
-    /// Farbe als "#RRGGBB" – wird auf 4 Bit je Kanal reduziert
-    pub farbe: String,
-}
-
-fn wahr() -> bool {
-    true
-}
-
-impl Default for Dpi {
-    fn default() -> Self {
-        let s = |wert, farbe: &str| DpiStufe { wert, aktiv: true, farbe: farbe.into() };
-        Dpi {
-            aktive_stufe: 1,
-            stufe: vec![
-                s(5, "#00FFFF"),
-                s(10, "#FFFF00"),
-                s(13, "#FF0000"),
-                s(16, "#FF77BB"),
-                s(14, "#0000FF"),
-                s(16, "#77FF77"),
-            ],
-        }
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum LedModus {
-    DpiAtmen,
+    /// `dpi_atmen` (Maus) aus älteren Dateien wird hierauf abgebildet
+    #[serde(alias = "dpi_atmen")]
     ZyklusAtmen,
     Dauerlicht,
     Tastenreaktion,
@@ -117,7 +80,6 @@ impl LedModus {
     /// Index wie im Original (LED_TYPE)
     pub fn index(self) -> u8 {
         match self {
-            LedModus::DpiAtmen => 0,
             LedModus::ZyklusAtmen => 1,
             LedModus::Dauerlicht => 2,
             LedModus::Tastenreaktion => 3,
@@ -157,16 +119,6 @@ impl Default for Beleuchtung {
             richtung: 0,
         }
     }
-}
-
-/// Diese Werte setzt das Original nicht in der Maus, sondern in Windows.
-#[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(deny_unknown_fields, default)]
-pub struct WindowsEinstellungen {
-    /// Zeigergeschwindigkeit 1–20 (leer lassen = nicht ändern)
-    pub zeigergeschwindigkeit: Option<u32>,
-    /// Zeilen pro Mausrad-Raste (leer lassen = nicht ändern)
-    pub scrollzeilen: Option<u32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -242,18 +194,6 @@ impl Konfiguration {
         if !(1..=127).contains(&self.allgemein.tippverzoegerung) {
             bail!("allgemein.tippverzoegerung muss zwischen 1 und 127 liegen");
         }
-        if self.dpi.stufe.len() != 6 {
-            bail!("Es müssen genau 6 [[dpi.stufe]]-Einträge vorhanden sein");
-        }
-        if !(1..=6).contains(&self.dpi.aktive_stufe) {
-            bail!("dpi.aktive_stufe muss zwischen 1 und 6 liegen");
-        }
-        for (i, s) in self.dpi.stufe.iter().enumerate() {
-            if s.wert > 16 {
-                bail!("dpi.stufe[{}].wert muss 0–16 sein", i + 1);
-            }
-            farbe_lesen(&s.farbe).with_context(|| format!("dpi.stufe[{}].farbe", i + 1))?;
-        }
         let b = &self.beleuchtung;
         if b.helligkeit > 7 || b.geschwindigkeit > 7 || b.richtung > 3 {
             bail!("beleuchtung: helligkeit/geschwindigkeit 0–7, richtung 0–3");
@@ -288,21 +228,6 @@ impl Konfiguration {
         }
         Ok(())
     }
-}
-
-/// "#RRGGBB" -> 4-Bit-Kanäle (0–15)
-pub fn farbe_lesen(s: &str) -> Result<[u8; 3]> {
-    let h = s.trim().trim_start_matches('#');
-    if h.len() != 6 {
-        bail!("Farbe \"{s}\" muss die Form #RRGGBB haben");
-    }
-    let mut out = [0u8; 3];
-    for i in 0..3 {
-        let v = u8::from_str_radix(&h[i * 2..i * 2 + 2], 16)
-            .with_context(|| format!("ungültige Farbe \"{s}\""))?;
-        out[i] = v >> 4;
-    }
-    Ok(out)
 }
 
 pub fn zahl_lesen(s: &str) -> Result<u32> {

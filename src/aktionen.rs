@@ -6,7 +6,6 @@ use serde::Serialize;
 use crate::konfig::{Geraet, Konfiguration};
 use crate::protokoll::{hex, Maus};
 use crate::speicher::{self, HW_PROFIL};
-use crate::windows;
 
 /// Mitgelieferte Beispielkonfiguration
 pub const BEISPIEL: &str = include_str!("../konfiguration.toml");
@@ -66,9 +65,6 @@ pub fn anwenden(
         geraet.block_schreiben(*adr, daten)?;
     }
     geraet.speichern()?;
-    if !trocken {
-        windows::anwenden(&k.windows)?;
-    }
     meldung(&format!("Fertig. Aktives Profil: {}", k.allgemein.aktives_profil));
     Ok(())
 }

@@ -10,39 +10,6 @@ abfragerate_hz = 1000
 dauerfeuer_ms = 50
 tippverzoegerung = 20
 
-[dpi]
-aktive_stufe = 1
-
-[[dpi.stufe]]
-wert = 5
-aktiv = true
-farbe = "#00FFFF"
-
-[[dpi.stufe]]
-wert = 10
-aktiv = true
-farbe = "#FFFF00"
-
-[[dpi.stufe]]
-wert = 13
-aktiv = true
-farbe = "#FF0000"
-
-[[dpi.stufe]]
-wert = 16
-aktiv = true
-farbe = "#FF77BB"
-
-[[dpi.stufe]]
-wert = 14
-aktiv = true
-farbe = "#0000FF"
-
-[[dpi.stufe]]
-wert = 16
-aktiv = true
-farbe = "#77FF77"
-
 [beleuchtung]
 modus = "aus"
 helligkeit = 4
@@ -57,8 +24,6 @@ benutzerfarbe_aktiv = false
 einzelfarbe = false
 symmetrie = false
 richtung = 0
-
-[windows]
 
 [[taste]]
 name = "t1"
