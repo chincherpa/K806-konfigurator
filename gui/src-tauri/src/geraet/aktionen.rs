@@ -1,14 +1,14 @@
-//! Höhere Aktionen, gemeinsam genutzt von Kommandozeile und GUI.
+//! Höhere Aktionen für die GUI.
 
 use anyhow::{bail, Context, Result};
 use serde::Serialize;
 
-use crate::konfig::{Geraet, Konfiguration};
-use crate::protokoll::{hex, Maus};
-use crate::speicher::{self, HW_PROFIL};
+use crate::geraet::konfig::{Geraet, Konfiguration};
+use crate::geraet::protokoll::{hex, Maus};
+use crate::geraet::speicher::{self, HW_PROFIL};
 
 /// Mitgelieferte Beispielkonfiguration
-pub const BEISPIEL: &str = include_str!("../konfiguration.toml");
+const BEISPIEL: &str = include_str!("konfiguration.toml");
 
 pub fn beispiel() -> Konfiguration {
     toml::from_str(BEISPIEL).expect("Beispielkonfiguration ist gültig")
@@ -48,31 +48,31 @@ pub fn anwenden(
 ) -> Result<()> {
     k.pruefen()?;
     let geraet = oeffnen(&k.geraet, trocken, ausfuehrlich)?;
-    let flags = geraet.byte_lesen(speicher::ADR_GERAETEFLAGS).context("Geräteflags lesen")?;
+    let flags = geraet.byte_lesen(speicher::ADR_GERAETEFLAGS).with_context(|| crate::tr!("Geräteflags lesen", "Reading device flags"))?;
     let abbild = speicher::abbild_erstellen(k, flags)?;
     let makros = speicher::makro_bloecke(k, &abbild)?;
 
-    meldung("Übertrage Profil-Auswahl …");
+    meldung(&crate::tr!("Übertrage Profil-Auswahl …", "Transferring profile selection …"));
     geraet.block_schreiben(speicher::ADR_PROFIL, &abbild[1..2])?;
-    meldung("Übertrage Grundeinstellungen und Tastenbelegung …");
+    meldung(&crate::tr!("Übertrage Grundeinstellungen und Tastenbelegung …", "Transferring settings and key assignments …"));
     let mut a = speicher::BLOCK_START;
     while a <= speicher::BLOCK_ENDE {
         geraet.block_schreiben(a, &abbild[a as usize..a as usize + 8])?;
         a += 8;
     }
-    meldung(&format!("Übertrage Tastentabelle und Tastendaten ({} Blöcke) …", makros.len()));
+    meldung(&crate::tr!("Übertrage Tastentabelle und Tastendaten ({} Blöcke) …", "Transferring key table and key data ({} blocks) …", makros.len()));
     for (adr, daten) in &makros {
         geraet.block_schreiben(*adr, daten)?;
     }
     geraet.speichern()?;
-    meldung(&format!("Fertig. Aktives Profil: {}", k.allgemein.aktives_profil));
+    meldung(&crate::tr!("Fertig. Aktives Profil: {}", "Done. Active profile: {}", k.allgemein.aktives_profil));
     Ok(())
 }
 
 /// Wechselt nur das aktive Profil (1–3).
 pub fn profil(g: &Geraet, nummer: u8) -> Result<()> {
     if !(1..=3).contains(&nummer) {
-        bail!("Profilnummer muss 1–3 sein");
+        bail!(crate::tr!("Profilnummer muss 1–3 sein", "Profile number must be 1–3"));
     }
     let p = HW_PROFIL[(nummer - 1) as usize];
     let geraet = oeffnen(g, false, false)?;
@@ -82,19 +82,13 @@ pub fn profil(g: &Geraet, nummer: u8) -> Result<()> {
     geraet.speichern()
 }
 
-pub struct Ausgelesen {
-    pub konfiguration: Konfiguration,
-    pub grundeinstellungen: [u8; speicher::GROESSE],
-    pub tabelle: Vec<u8>,
-}
-
 /// Liest Grundeinstellungen und Tastentabelle. `fortschritt(gelesen, gesamt)`.
 pub fn auslesen(
     g: &Geraet,
-    tasten: &[crate::konfig::Taste],
+    tasten: &[crate::geraet::konfig::Taste],
     ausfuehrlich: bool,
     fortschritt: &mut dyn FnMut(usize, usize),
-) -> Result<Ausgelesen> {
+) -> Result<Konfiguration> {
     let geraet = oeffnen(g, false, ausfuehrlich)?;
     let gesamt = speicher::GROESSE + speicher::TABELLE_GROESSE;
     let mut m = [0u8; speicher::GROESSE];
@@ -111,16 +105,5 @@ pub fn auslesen(
     let mut konfiguration = speicher::dekodieren(&m, &tabelle, tasten);
     // Profilnamen und Geräteeinstellungen bleiben wie übergeben
     konfiguration.geraet = Geraet { ..*g };
-    Ok(Ausgelesen { konfiguration, grundeinstellungen: m, tabelle })
-}
-
-pub fn lesen(g: &Geraet, start: u16, anzahl: u16) -> Result<Vec<u8>> {
-    let geraet = oeffnen(g, false, false)?;
-    (0..anzahl).map(|i| geraet.byte_lesen(start + i)).collect()
-}
-
-pub fn schreiben(g: &Geraet, adresse: u16, daten: &[u8]) -> Result<()> {
-    let geraet = oeffnen(g, false, false)?;
-    geraet.block_schreiben(adresse, daten)?;
-    geraet.speichern()
+    Ok(konfiguration)
 }

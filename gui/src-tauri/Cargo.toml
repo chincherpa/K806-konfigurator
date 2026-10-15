@@ -14,4 +14,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
 anyhow = "1"
-x806-konfig = { path = "../.." }
+hidapi = "2.6"

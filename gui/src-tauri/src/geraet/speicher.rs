@@ -6,8 +6,8 @@ use std::collections::BTreeMap;
 
 use anyhow::{bail, Result};
 
-use crate::funktionen::{self, Funktion, CODE_KOMBI, CODE_MAKRO, CODE_MEDIEN, CODE_TASTE};
-use crate::konfig::*;
+use crate::geraet::funktionen::{self, Funktion, CODE_KOMBI, CODE_MAKRO, CODE_MEDIEN, CODE_TASTE};
+use crate::geraet::konfig::*;
 
 pub const GROESSE: usize = 0x80;
 /// Erster und letzter 8-Byte-Block der Grundeinstellungen
@@ -170,7 +170,7 @@ fn makro_ablegen(
 ) -> Result<()> {
     let anzahl = ereignisse.len();
     if anzahl > 0x1FFF {
-        bail!("Makro zu lang ({anzahl} Ereignisse)");
+        bail!(crate::tr!("Makro zu lang ({anzahl} Ereignisse)", "Macro too long ({anzahl} events)"));
     }
     let mut d = vec![0x01, 0x00];
     for (i, &(gedrueckt, u)) in ereignisse.iter().enumerate() {
@@ -179,7 +179,7 @@ fn makro_ablegen(
     }
     d.resize(d.len().div_ceil(8) * 8, 0);
     if *adr + d.len() as u16 > DATEN_ENDE {
-        bail!("Makrospeicher voll – Texte/Kombinationen kürzen");
+        bail!(crate::tr!("Makrospeicher voll – Texte/Kombinationen kürzen", "Macro memory full – shorten texts/combinations"));
     }
     e[0] = usb;
     e[1] = (anzahl & 0x7F) as u8;
@@ -211,7 +211,7 @@ pub fn makro_bloecke(k: &Konfiguration, abbild: &[u8; GROESSE]) -> Result<Vec<(u
                 Funktion::Taste(u) => {
                     let u = *u;
                     if adr + 8 > DATEN_ENDE {
-                        bail!("Zu viele Tastenbelegungen – Makrospeicher voll");
+                        bail!(crate::tr!("Zu viele Tastenbelegungen – Makrospeicher voll", "Too many key assignments – macro memory full"));
                     }
                     e[0] = usb;
                     e[1] = 1; // Anzahl Ereignisse
@@ -356,7 +356,7 @@ mod tests {
     use super::*;
 
     fn beispiel() -> Konfiguration {
-        toml::from_str(include_str!("../konfiguration.toml")).unwrap()
+        toml::from_str(include_str!("konfiguration.toml")).unwrap()
     }
 
     fn tabelle_aus(bloecke: &[(u16, Vec<u8>)]) -> Vec<u8> {
@@ -373,7 +373,7 @@ mod tests {
 
     #[test]
     fn alte_maus_abschnitte_werden_ignoriert() {
-        let alt = include_str!("../konfiguration.toml").replace(
+        let alt = include_str!("konfiguration.toml").replace(
             "[beleuchtung]
 modus = \"aus\"",
             "[dpi]
@@ -388,7 +388,7 @@ farbe = \"#00FFFF\"
 [beleuchtung]
 modus = \"dpi_atmen\"",
         );
-        assert_ne!(alt, include_str!("../konfiguration.toml"));
+        assert_ne!(alt, include_str!("konfiguration.toml"));
         let k: Konfiguration = toml::from_str(&alt).unwrap();
         assert_eq!(k.beleuchtung.modus, LedModus::ZyklusAtmen);
         let neu = toml::to_string(&k).unwrap();

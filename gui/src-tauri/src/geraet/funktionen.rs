@@ -9,7 +9,7 @@
 
 use anyhow::{bail, Result};
 
-use crate::konfig::zahl_lesen;
+use crate::geraet::konfig::zahl_lesen;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Funktion {
@@ -114,11 +114,11 @@ fn taste_lesen(name: &str) -> Result<u8> {
     if name.starts_with("0x") {
         let v = zahl_lesen(name)?;
         if v == 0 || v > 0xFF {
-            bail!("HID-Code {name} muss 0x01–0xFF sein");
+            bail!(crate::tr!("HID-Code {name} muss 0x01–0xFF sein", "HID code {name} must be 0x01–0xFF"));
         }
         return Ok(v as u8);
     }
-    bail!("unbekannte Taste \"{name}\" – `x806 funktionen` zeigt alle Namen, oder 0xNN")
+    bail!(crate::tr!("unbekannte Taste \"{name}\" (oder 0xNN)", "unknown key \"{name}\" (or 0xNN)"))
 }
 
 /// Zeichen -> (Modifier, HID-Usage) für ein deutsches QWERTZ-Layout
@@ -165,7 +165,10 @@ pub fn text_ereignisse(text: &str) -> Result<Vec<(bool, u8)>> {
     let mut e = Vec::new();
     for c in text.chars() {
         let Some((modifier, u)) = zeichen(c) else {
-            bail!("Zeichen „{c}“ kann nicht getippt werden (nicht unterstützt: ^ ´ ` und Sonderzeichen außerhalb des deutschen Layouts)");
+            bail!(crate::tr!(
+                "Zeichen „{c}“ kann nicht getippt werden (nicht unterstützt: ^ ´ ` und Sonderzeichen außerhalb des deutschen Layouts)",
+                "Character “{c}” cannot be typed (not supported: ^ ´ ` and characters outside the German layout)"
+            ));
         };
         if let Some(m) = modifier {
             e.push((true, m));
@@ -186,10 +189,10 @@ pub fn kodieren(text: &str) -> Result<Funktion> {
     if ohne_einzug.get(..5).is_some_and(|p| p.eq_ignore_ascii_case("text:")) {
         let inhalt = &ohne_einzug[5..];
         if inhalt.is_empty() {
-            bail!("text: ist leer");
+            bail!(crate::tr!("text: ist leer", "text: is empty"));
         }
         if inhalt.chars().count() > TEXT_MAX {
-            bail!("text: höchstens {TEXT_MAX} Zeichen");
+            bail!(crate::tr!("text: höchstens {TEXT_MAX} Zeichen", "text: at most {TEXT_MAX} characters"));
         }
         text_ereignisse(inhalt)?;
         return Ok(Funktion::Text(inhalt.to_string()));
@@ -201,7 +204,10 @@ pub fn kodieren(text: &str) -> Result<Funktion> {
     if let Some(liste) = n.strip_prefix("kombi:") {
         let teile: Vec<&str> = liste.split('+').map(str::trim).collect();
         if teile.len() < 2 || teile.len() > 4 {
-            bail!("kombi: braucht 2–4 Tasten, z. B. kombi:strg+c (Plus-Taste heißt \"plus\")");
+            bail!(crate::tr!(
+                "kombi: braucht 2–4 Tasten, z. B. kombi:strg+c (Plus-Taste heißt \"plus\")",
+                "kombi: needs 2–4 keys, e.g. kombi:strg+c (the plus key is called \"plus\")"
+            ));
         }
         let mut k = [0u8; 4];
         for (i, t) in teile.iter().enumerate() {
@@ -216,22 +222,25 @@ pub fn kodieren(text: &str) -> Result<Funktion> {
         if name.starts_with("0x") {
             let v = zahl_lesen(name)?;
             if v == 0 || v > 0xFFFF {
-                bail!("Consumer-Code {name} muss 0x0001–0xFFFF sein");
+                bail!(crate::tr!("Consumer-Code {name} muss 0x0001–0xFFFF sein", "Consumer code {name} must be 0x0001–0xFFFF"));
             }
             return Ok(Funktion::Medien(v as u16));
         }
-        bail!("unbekannte Medienfunktion \"{name}\"");
+        bail!(crate::tr!("unbekannte Medienfunktion \"{name}\"", "unknown media function \"{name}\""));
     }
     if let Some(roh) = n.strip_prefix("roh:") {
         let v = zahl_lesen(roh)?;
         if v > 0x1F || [CODE_KOMBI, CODE_TASTE, CODE_MEDIEN, CODE_MAKRO].contains(&(v as u8)) {
-            bail!("Rohcode {roh} ungültig (max. 0x1F; 0x0D/0x0E/0x0F/0x1E brauchen Tastendaten)");
+            bail!(crate::tr!(
+                "Rohcode {roh} ungültig (max. 0x1F; 0x0D/0x0E/0x0F/0x1E brauchen Tastendaten)",
+                "Raw code {roh} invalid (max. 0x1F; 0x0D/0x0E/0x0F/0x1E need key data)"
+            ));
         }
         return Ok(Funktion::Einfach(v as u8));
     }
     match EINFACH.iter().find(|(k, _, _)| *k == n) {
         Some((_, c, _)) => Ok(Funktion::Einfach(*c)),
-        None => bail!("unbekannte Funktion \"{text}\" – siehe `x806 funktionen`"),
+        None => bail!(crate::tr!("unbekannte Funktion \"{text}\"", "unknown function \"{text}\"")),
     }
 }
 

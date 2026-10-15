@@ -1,7 +1,7 @@
 # K806 Konfigurator (GUI)
 
 Grafische Oberfläche für das K806/X806-Tastenfeld. Tauri v2 + TypeScript (ohne Framework),
-die Gerätelogik kommt aus der Bibliothek im Hauptordner (`x806_konfig`).
+die Gerätelogik liegt in `src-tauri/src/geraet/`.
 
 ## Entwickeln
 
@@ -32,5 +32,5 @@ Mit Installer (NSIS, lädt beim ersten Mal NSIS nach): `pnpm tauri build`.
 * **Vom Gerät lesen** holt die aktuelle Belegung aus dem Gerät.
 
 Änderungen werden automatisch gespeichert unter
-`%APPDATA%\de.x806.konfigurator\konfiguration.toml` (gleiches Format wie die Kommandozeile).
+`%APPDATA%\de.x806.konfigurator\konfiguration.toml`.
 Das Original-Programm `X806.exe` muss geschlossen sein.

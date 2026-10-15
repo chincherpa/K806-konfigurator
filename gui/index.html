@@ -14,32 +14,40 @@
           <span class="marke-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h1M9.5 10h1M13 10h1M16.5 10h1M6 13.5h1M8.5 14h7M16.5 13.5h1"/></svg>
           </span>
-          <h1>K806 Konfigurator</h1>
+          <h1 data-i18n="app.titel">K806 Konfigurator</h1>
         </div>
 
-        <div class="profilwahl" id="profilwahl" role="tablist" aria-label="Profil"></div>
+        <div class="profilwahl" id="profilwahl" role="tablist" aria-label="Profil" data-i18n-aria-label="kopf.profil"></div>
 
         <div class="kopf-rechts">
-          <div class="geraet" id="geraet" data-zustand="unbekannt" title="Gerätestatus">
+          <div class="geraet" id="geraet" data-zustand="unbekannt" title="Gerätestatus" data-i18n-title="kopf.geraetestatus">
             <span class="punkt"></span><span id="geraet-text">Suche Gerät …</span>
           </div>
           <div class="menue">
-            <button class="symbolknopf" id="knopf-menue" aria-haspopup="menu" aria-expanded="false" title="Weitere Aktionen">
+            <button class="symbolknopf" id="knopf-menue" aria-haspopup="menu" aria-expanded="false" title="Weitere Aktionen" data-i18n-title="kopf.menue">
               <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
             </button>
             <div class="menue-liste" id="menue-liste" role="menu" hidden>
-              <button role="menuitem" data-aktion="auslesen">Vom Gerät lesen</button>
-              <button role="menuitem" data-aktion="aktivieren">Profil am Gerät aktivieren</button>
+              <button role="menuitem" data-aktion="auslesen" data-i18n="menue.auslesen">Vom Gerät lesen</button>
+              <button role="menuitem" data-aktion="aktivieren" data-i18n="menue.aktivieren">Profil am Gerät aktivieren</button>
               <hr />
-              <button role="menuitem" data-aktion="oeffnen">Konfiguration öffnen …</button>
-              <button role="menuitem" data-aktion="speichern-unter">Konfiguration speichern unter …</button>
+              <button role="menuitem" data-aktion="oeffnen" data-i18n="menue.oeffnen">Konfiguration öffnen …</button>
+              <button role="menuitem" data-aktion="speichern-unter" data-i18n="menue.speichernUnter">Konfiguration speichern unter …</button>
+              <hr />
+              <div class="menue-sprache" role="group" aria-labelledby="sprache-titel">
+                <span id="sprache-titel" data-i18n="menue.sprache">Sprache</span>
+                <div class="sprachwahl" id="sprachwahl">
+                  <button role="menuitemradio" data-sprache="de" aria-checked="false" title="Deutsch">DE</button>
+                  <button role="menuitemradio" data-sprache="en" aria-checked="false" title="English">EN</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
       <main class="inhalt">
-        <section class="buehne-rahmen" aria-label="Tastenfeld">
+        <section class="buehne-rahmen" aria-label="Tastenfeld" data-i18n-aria-label="buehne.titel">
           <div class="buehne" id="buehne">
             <svg class="linien" id="linien" aria-hidden="true"></svg>
             <div class="geraetkoerper" id="geraetkoerper">
@@ -53,15 +61,15 @@
           <section class="karte" id="editor" aria-labelledby="editor-titel">
             <h2 id="editor-titel">Taste 1 anpassen</h2>
 
-            <label class="feld">Aktionstyp
+            <label class="feld"><span data-i18n="editor.aktionstyp">Aktionstyp</span>
               <span class="auswahl">
                 <select id="aktionstyp">
-                  <option value="kombi">Tastenkombination</option>
-                  <option value="taste">Einzelne Taste</option>
-                  <option value="text">Text tippen</option>
-                  <option value="medien">Medien</option>
-                  <option value="sonstige">Sonstige Funktion</option>
-                  <option value="keine">Keine</option>
+                  <option value="kombi" data-i18n="art.kombi">Tastenkombination</option>
+                  <option value="taste" data-i18n="art.taste">Einzelne Taste</option>
+                  <option value="text" data-i18n="art.text">Text tippen</option>
+                  <option value="medien" data-i18n="art.medien">Medien</option>
+                  <option value="sonstige" data-i18n="art.sonstige">Sonstige Funktion</option>
+                  <option value="keine" data-i18n="art.keine">Keine</option>
                 </select>
               </span>
             </label>
@@ -75,25 +83,25 @@
               <span class="hinweis" id="aufnahme-hinweis"></span>
             </div>
 
-            <label class="feld" data-fuer="taste">Aus Liste (z. B. F13–F24)
+            <label class="feld" data-fuer="taste"><span data-i18n="editor.ausListe">Aus Liste (z. B. F13–F24)</span>
               <span class="auswahl"><select id="wahl-taste"></select></span>
             </label>
 
-            <label class="feld" data-fuer="text">Text
-              <textarea id="eingabe-text" rows="3" maxlength="120" spellcheck="false" placeholder="name@beispiel.de"></textarea>
-              <span class="hinweis">Wird wie getippt eingegeben (deutsches Tastaturlayout). Zeilenumbruch = Enter. Nicht möglich: ^ ´ `</span>
+            <label class="feld" data-fuer="text"><span data-i18n="editor.text">Text</span>
+              <textarea id="eingabe-text" rows="3" maxlength="120" spellcheck="false" placeholder="name@beispiel.de" data-i18n-placeholder="editor.textBeispiel"></textarea>
+              <span class="hinweis" data-i18n="editor.textHinweis">Wird wie getippt eingegeben (deutsches Tastaturlayout). Zeilenumbruch = Enter. Nicht möglich: ^ ´ `</span>
             </label>
 
-            <label class="feld" data-fuer="medien">Medienfunktion
+            <label class="feld" data-fuer="medien"><span data-i18n="editor.medien">Medienfunktion</span>
               <span class="auswahl"><select id="wahl-medien"></select></span>
             </label>
 
-            <label class="feld" data-fuer="sonstige">Funktion
+            <label class="feld" data-fuer="sonstige"><span data-i18n="editor.sonstige">Funktion</span>
               <span class="auswahl"><select id="wahl-sonstige"></select></span>
             </label>
 
             <label class="feld" data-fuer="kombi taste text medien sonstige">
-              <span>Namen <span class="leise">(optional)</span></span>
+              <span><span data-i18n="editor.name">Namen</span> <span class="leise" data-i18n="editor.optional">(optional)</span></span>
               <input type="text" id="eingabe-name" maxlength="32" autocomplete="off" />
             </label>
 
@@ -101,25 +109,25 @@
           </section>
 
           <details class="karte klappkarte">
-            <summary>Beleuchtung &amp; Gerät</summary>
-            <label class="feld">Lichtmodus
+            <summary data-i18n="einst.titel">Beleuchtung &amp; Gerät</summary>
+            <label class="feld"><span data-i18n="einst.lichtmodus">Lichtmodus</span>
               <span class="auswahl">
                 <select id="led-modus">
-                  <option value="dauerlicht">Dauerlicht</option>
-                  <option value="zyklus_atmen">Zyklus-Atmen</option>
-                  <option value="einzel_atmen">Einzel-Atmen</option>
-                  <option value="tastenreaktion">Tastenreaktion</option>
-                  <option value="aus">Aus</option>
+                  <option value="dauerlicht" data-i18n="led.dauerlicht">Dauerlicht</option>
+                  <option value="zyklus_atmen" data-i18n="led.zyklus_atmen">Zyklus-Atmen</option>
+                  <option value="einzel_atmen" data-i18n="led.einzel_atmen">Einzel-Atmen</option>
+                  <option value="tastenreaktion" data-i18n="led.tastenreaktion">Tastenreaktion</option>
+                  <option value="aus" data-i18n="led.aus">Aus</option>
                 </select>
               </span>
             </label>
-            <label class="feld">Helligkeit <output id="led-hell-wert"></output>
+            <label class="feld"><span data-i18n="einst.helligkeit">Helligkeit</span> <output id="led-hell-wert"></output>
               <input type="range" id="led-hell" min="0" max="7" step="1" />
             </label>
-            <label class="feld">Tempo <output id="led-tempo-wert"></output>
+            <label class="feld"><span data-i18n="einst.tempo">Tempo</span> <output id="led-tempo-wert"></output>
               <input type="range" id="led-tempo" min="0" max="7" step="1" />
             </label>
-            <label class="feld">Abfragerate
+            <label class="feld"><span data-i18n="einst.abfragerate">Abfragerate</span>
               <span class="auswahl">
                 <select id="abfragerate">
                   <option value="125">125 Hz</option>
@@ -129,8 +137,8 @@
                 </select>
               </span>
             </label>
-            <label class="feld" title="Pause je Tastenereignis beim Tippen von Text. Kleiner = schneller; zu schnell gehen Zeichen verloren. Original: 15">
-              Tippverzögerung <output id="tippverzoegerung-wert"></output>
+            <label class="feld" title="Pause je Tastenereignis beim Tippen von Text. Kleiner = schneller; zu schnell gehen Zeichen verloren. Original: 15" data-i18n-title="einst.tippverzoegerungHinweis">
+              <span data-i18n="einst.tippverzoegerung">Tippverzögerung</span> <output id="tippverzoegerung-wert"></output>
               <input type="range" id="tippverzoegerung" min="1" max="127" step="1" />
             </label>
           </details>
@@ -138,13 +146,13 @@
       </main>
 
       <footer class="fuss">
-        <button class="knopf" id="knopf-werk">Werkseinstellungen</button>
+        <button class="knopf" id="knopf-werk" data-i18n="fuss.werk">Werkseinstellungen</button>
         <div class="status">
           <div class="fortschritt" id="fortschritt" hidden><div id="fortschritt-balken"></div></div>
           <span id="meldung"></span>
         </div>
-        <button class="knopf" id="knopf-abbrechen">Abbrechen</button>
-        <button class="knopf primaer" id="knopf-anwenden">Speichern &amp; Anwenden</button>
+        <button class="knopf" id="knopf-abbrechen" data-i18n="fuss.abbrechen">Abbrechen</button>
+        <button class="knopf primaer" id="knopf-anwenden" data-i18n="fuss.anwenden">Speichern &amp; Anwenden</button>
       </footer>
     </div>
   </body>

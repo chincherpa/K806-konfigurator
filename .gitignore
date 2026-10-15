@@ -1,5 +1,4 @@
 # --- Rust ---
-/target/
 gui/src-tauri/target/
 **/*.rs.bk
 *.pdb

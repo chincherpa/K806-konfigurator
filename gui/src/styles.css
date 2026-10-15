@@ -79,6 +79,11 @@ h1 { margin: 0; font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif
 }
 .menue-liste button:hover { background: #363a43; }
 .menue-liste hr { border: 0; border-top: 1px solid #40444d; margin: 4px 2px; }
+.menue-sprache { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 6px 4px 12px; }
+.sprachwahl { display: flex; padding: 2px; gap: 2px; background: var(--karte); border: 1px solid var(--karte-rand); border-radius: 7px; }
+.menue-liste .sprachwahl button { font-size: 12px; padding: 3px 10px; border-radius: 5px; color: var(--text-2); }
+.menue-liste .sprachwahl button:hover { background: transparent; color: var(--text); }
+.menue-liste .sprachwahl button[aria-checked="true"] { background: #353944; color: var(--text); box-shadow: 0 1px 2px #0006; }
 
 /* ---------- Inhalt ---------- */
 .inhalt { display: grid; grid-template-columns: 1fr 268px; gap: 20px; min-height: 0; }

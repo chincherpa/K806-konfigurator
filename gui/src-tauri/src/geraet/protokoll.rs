@@ -52,42 +52,24 @@ pub struct Maus {
     pub ausfuehrlich: bool,
 }
 
-/// Listet alle passenden HID-Schnittstellen auf.
-pub fn auflisten(vid: u16, pid: u16) -> Result<Vec<String>> {
-    let api = HidApi::new().context("HID-Bibliothek konnte nicht initialisiert werden")?;
-    Ok(api
-        .device_list()
-        .filter(|d| d.vendor_id() == vid && d.product_id() == pid)
-        .map(|d| {
-            format!(
-                "{:04X}:{:04X}  UsagePage=0x{:04X} Usage=0x{:04X}  {}  {}",
-                d.vendor_id(),
-                d.product_id(),
-                d.usage_page(),
-                d.usage(),
-                d.product_string().unwrap_or("?"),
-                d.path().to_string_lossy()
-            )
-        })
-        .collect())
-}
-
 impl Maus {
     pub fn oeffnen(vid: u16, pid: u16, laenge: usize, trockenlauf: bool) -> Result<Self> {
         if trockenlauf {
             return Ok(Maus { geraet: None, laenge, trockenlauf, ausfuehrlich: true });
         }
-        let api = HidApi::new().context("HID-Bibliothek konnte nicht initialisiert werden")?;
+        let api = HidApi::new().with_context(|| crate::tr!("HID-Bibliothek konnte nicht initialisiert werden", "Could not initialise HID library"))?;
         let info = api
             .device_list()
             .find(|d| d.vendor_id() == vid && d.product_id() == pid && d.usage_page() == USAGE_PAGE_BEFEHLE)
             .ok_or_else(|| {
-                anyhow!(
+                anyhow!(crate::tr!(
                     "Keine Maus {vid:04X}:{pid:04X} mit Usage-Page 0x{USAGE_PAGE_BEFEHLE:04X} gefunden. \
-                     Ist sie angeschlossen und das Original-Programm (X806.exe) geschlossen?"
-                )
+                     Ist sie angeschlossen und das Original-Programm (X806.exe) geschlossen?",
+                    "No device {vid:04X}:{pid:04X} with usage page 0x{USAGE_PAGE_BEFEHLE:04X} found. \
+                     Is it connected and the original software (X806.exe) closed?"
+                ))
             })?;
-        let geraet = info.open_device(&api).context("Gerät konnte nicht geöffnet werden")?;
+        let geraet = info.open_device(&api).with_context(|| crate::tr!("Gerät konnte nicht geöffnet werden", "Could not open device"))?;
         Ok(Maus { geraet: Some(geraet), laenge, trockenlauf, ausfuehrlich: false })
     }
 
@@ -108,7 +90,13 @@ impl Maus {
         }
         let g = self.geraet.as_ref().expect("Gerät offen");
         g.send_feature_report(&buf)
-            .with_context(|| format!("SET_FEATURE fehlgeschlagen (Berichtslänge {} Byte – ggf. `bericht_laenge` anpassen)", buf.len()))
+            .with_context(|| {
+                crate::tr!(
+                    "SET_FEATURE fehlgeschlagen (Berichtslänge {} Byte – ggf. `bericht_laenge` anpassen)",
+                    "SET_FEATURE failed (report length {} bytes – adjust `bericht_laenge` if needed)",
+                    buf.len()
+                )
+            })
     }
 
     fn empfangen(&self) -> Result<Vec<u8>> {
@@ -118,7 +106,7 @@ impl Maus {
         let mut buf = vec![0u8; self.laenge.max(8)];
         buf[0] = REPORT_ID;
         let g = self.geraet.as_ref().expect("Gerät offen");
-        let n = g.get_feature_report(&mut buf).context("GET_FEATURE fehlgeschlagen")?;
+        let n = g.get_feature_report(&mut buf).with_context(|| crate::tr!("GET_FEATURE fehlgeschlagen", "GET_FEATURE failed"))?;
         buf.truncate(n.max(8));
         if self.ausfuehrlich {
             println!("  <- {}", hex(&buf));
@@ -134,7 +122,7 @@ impl Maus {
     /// Schreibt einen Block (1–8 Byte) an eine Adresse im Konfigurationsspeicher.
     pub fn block_schreiben(&self, adresse: u16, daten: &[u8]) -> Result<()> {
         if daten.is_empty() || daten.len() > 8 {
-            bail!("Blocklänge muss 1–8 Byte sein (ist {})", daten.len());
+            bail!(crate::tr!("Blocklänge muss 1–8 Byte sein (ist {})", "Block length must be 1–8 bytes (is {})", daten.len()));
         }
         let n = daten.len() as u8 - 1;
         for (i, b) in daten.iter().enumerate() {

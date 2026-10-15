@@ -171,59 +171,71 @@ pub struct Erweitert {
 impl Konfiguration {
     pub fn laden(pfad: &Path) -> Result<Self> {
         let text = std::fs::read_to_string(pfad)
-            .with_context(|| format!("Datei {} kann nicht gelesen werden", pfad.display()))?;
+            .with_context(|| crate::tr!("Datei {} kann nicht gelesen werden", "Cannot read file {}", pfad.display()))?;
         let k: Konfiguration = toml::from_str(&text)
-            .with_context(|| format!("Fehler in {}", pfad.display()))?;
+            .with_context(|| crate::tr!("Fehler in {}", "Error in {}", pfad.display()))?;
         k.pruefen()?;
         Ok(k)
     }
 
     pub fn pruefen(&self) -> Result<()> {
         if self.profil.is_empty() || self.profil.len() > 3 {
-            bail!("Es müssen 1–3 [[profil]]-Einträge vorhanden sein (gefunden: {})", self.profil.len());
+            bail!(crate::tr!(
+                "Es müssen 1–3 [[profil]]-Einträge vorhanden sein (gefunden: {})",
+                "There must be 1–3 [[profil]] entries (found: {})",
+                self.profil.len()
+            ));
         }
         if !(1..=self.profil.len() as u8).contains(&self.allgemein.aktives_profil) {
-            bail!("allgemein.aktives_profil muss zwischen 1 und {} liegen", self.profil.len());
+            bail!(crate::tr!(
+                "allgemein.aktives_profil muss zwischen 1 und {} liegen",
+                "allgemein.aktives_profil must be between 1 and {}",
+                self.profil.len()
+            ));
         }
         if ![125, 250, 500, 1000].contains(&self.allgemein.abfragerate_hz) {
-            bail!("allgemein.abfragerate_hz muss 125, 250, 500 oder 1000 sein");
+            bail!(crate::tr!("allgemein.abfragerate_hz muss 125, 250, 500 oder 1000 sein", "allgemein.abfragerate_hz must be 125, 250, 500 or 1000"));
         }
         if !(8..=2040).contains(&self.allgemein.dauerfeuer_ms) {
-            bail!("allgemein.dauerfeuer_ms muss zwischen 8 und 2040 liegen");
+            bail!(crate::tr!("allgemein.dauerfeuer_ms muss zwischen 8 und 2040 liegen", "allgemein.dauerfeuer_ms must be between 8 and 2040"));
         }
         if !(1..=127).contains(&self.allgemein.tippverzoegerung) {
-            bail!("allgemein.tippverzoegerung muss zwischen 1 und 127 liegen");
+            bail!(crate::tr!("allgemein.tippverzoegerung muss zwischen 1 und 127 liegen", "allgemein.tippverzoegerung must be between 1 and 127"));
         }
         let b = &self.beleuchtung;
         if b.helligkeit > 7 || b.geschwindigkeit > 7 || b.richtung > 3 {
-            bail!("beleuchtung: helligkeit/geschwindigkeit 0–7, richtung 0–3");
+            bail!(crate::tr!("beleuchtung: helligkeit/geschwindigkeit 0–7, richtung 0–3", "beleuchtung: helligkeit/geschwindigkeit 0–7, richtung 0–3"));
         }
         for t in &self.taste {
             if !(1..=11).contains(&t.steckplatz) {
-                bail!("Taste \"{}\": steckplatz muss 1–11 sein", t.name);
+                bail!(crate::tr!("Taste \"{}\": steckplatz muss 1–11 sein", "Key \"{}\": steckplatz must be 1–11", t.name));
             }
         }
         for (pi, p) in self.profil.iter().enumerate() {
             for (name, funktion) in &p.belegung {
                 if !self.taste.iter().any(|t| &t.name == name) {
-                    bail!("Profil {}: unbekannte Taste \"{name}\" (nicht unter [[taste]] definiert)", pi + 1);
+                    bail!(crate::tr!(
+                        "Profil {}: unbekannte Taste \"{name}\" (nicht unter [[taste]] definiert)",
+                        "Profile {}: unknown key \"{name}\" (not defined under [[taste]])",
+                        pi + 1
+                    ));
                 }
-                crate::funktionen::kodieren(funktion)
-                    .with_context(|| format!("Profil {}, Taste \"{name}\"", pi + 1))?;
+                crate::geraet::funktionen::kodieren(funktion)
+                    .with_context(|| crate::tr!("Profil {}, Taste \"{name}\"", "Profile {}, key \"{name}\"", pi + 1))?;
             }
             for (name, r) in &p.led_reaktion {
                 if !self.taste.iter().any(|t| &t.name == name) {
-                    bail!("Profil {}: led_reaktion für unbekannte Taste \"{name}\"", pi + 1);
+                    bail!(crate::tr!("Profil {}: led_reaktion für unbekannte Taste \"{name}\"", "Profile {}: led_reaktion for unknown key \"{name}\"", pi + 1));
                 }
                 if r.typ > 3 {
-                    bail!("Profil {}: led_reaktion.typ muss 0–3 sein", pi + 1);
+                    bail!(crate::tr!("Profil {}: led_reaktion.typ muss 0–3 sein", "Profile {}: led_reaktion.typ must be 0–3", pi + 1));
                 }
             }
         }
         for (adr, daten) in &self.erweitert.rohdaten {
-            zahl_lesen(adr).with_context(|| format!("erweitert.rohdaten: Adresse \"{adr}\""))?;
+            zahl_lesen(adr).with_context(|| crate::tr!("erweitert.rohdaten: Adresse \"{adr}\"", "erweitert.rohdaten: address \"{adr}\""))?;
             if daten.is_empty() || daten.len() > 8 {
-                bail!("erweitert.rohdaten \"{adr}\": 1–8 Byte erlaubt");
+                bail!(crate::tr!("erweitert.rohdaten \"{adr}\": 1–8 Byte erlaubt", "erweitert.rohdaten \"{adr}\": 1–8 bytes allowed"));
             }
         }
         Ok(())
@@ -237,5 +249,5 @@ pub fn zahl_lesen(s: &str) -> Result<u32> {
     } else {
         s.parse()
     };
-    r.with_context(|| format!("\"{s}\" ist keine Zahl"))
+    r.with_context(|| crate::tr!("\"{s}\" ist keine Zahl", "\"{s}\" is not a number"))
 }

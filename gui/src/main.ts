@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { ask, open, save } from "@tauri-apps/plugin-dialog";
+import { ANZEIGE_EN, KATALOG_EN, seiteUebersetzen, sprache, spracheSetzen, t, type Sprache } from "./i18n";
 
 // ---------------------------------------------------------------------------
 // Typen (spiegeln die Rust-Strukturen in src/konfig.rs)
@@ -59,6 +60,7 @@ let gewaehlt = 0; // Index in k.taste
 let editorArt: Art = "kombi";
 let beschaeftigt = false;
 let liveProfil: number | null = null;
+let verbunden: boolean | null = null; // null = noch unbekannt
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const profil = () => k.profil[profilIndex];
@@ -117,7 +119,7 @@ const CODE_ZU_HID: Record<string, number> = (() => {
   return m;
 })();
 
-const ANZEIGE: Record<string, string> = {
+const ANZEIGE_DE: Record<string, string> = {
   eingabe: "Enter", esc: "Esc", ruecktaste: "Rücktaste", tab: "Tab", leertaste: "Leertaste",
   feststell: "Feststell", druck: "Druck", rollen: "Rollen", pause: "Pause", einfg: "Einfg",
   pos1: "Pos1", bild_auf: "Bild↑", entf: "Entf", ende: "Ende", bild_ab: "Bild↓",
@@ -126,8 +128,11 @@ const ANZEIGE: Record<string, string> = {
   strg_rechts: "Strg-R", umschalt_rechts: "Umschalt-R", altgr: "AltGr", win_rechts: "Win-R", plus: "+",
 };
 
+const anzeigeTabelle = () => (sprache === "en" ? ANZEIGE_EN : ANZEIGE_DE);
+
 function anzeige(name: string): string {
-  if (ANZEIGE[name]) return ANZEIGE[name];
+  const a = anzeigeTabelle()[name];
+  if (a) return a;
   if (name.startsWith("num_")) return "Num" + name.slice(4);
   if (/^f\d+$/.test(name)) return name.toUpperCase();
   return name.length === 1 ? name.toUpperCase() : name;
@@ -136,7 +141,9 @@ function anzeige(name: string): string {
 /** Anzeigetext -> interner Name (für das Eingabefeld) */
 function ausAnzeige(text: string, inKombi: boolean): string {
   const t = text.trim().toLowerCase();
-  for (const [name, a] of Object.entries(ANZEIGE)) if (a.toLowerCase() === t) return inKombi && name === "+" ? "plus" : name;
+  // Beide Sprachen akzeptieren, die aktuelle zuerst
+  for (const tabelle of [anzeigeTabelle(), ANZEIGE_DE, ANZEIGE_EN])
+    for (const [name, a] of Object.entries(tabelle)) if (a.toLowerCase() === t) return inKombi && name === "+" ? "plus" : name;
   if (/^num\d$/.test(t)) return "num_" + t.slice(3);
   if (inKombi && t === "+") return "plus";
   return t;
@@ -166,23 +173,25 @@ function artVon(f: string | undefined): Art {
 
 /** Kurzbeschreibung einer Funktion */
 function beschreibung(f: string | undefined): string {
-  if (!f || f === "aus") return "Keine Funktion";
+  if (!f || f === "aus") return t("funktion.keine");
   const [p, rest] = teile(f);
-  if (p === "taste") return `Taste ${anzeige(rest)}`;
+  if (p === "taste") return t("funktion.taste", { name: anzeige(rest) });
   if (p === "kombi") return rest.split("+").map(anzeige).join("+");
-  if (p === "text") return `„${rest.replace(/\n/g, "⏎")}“`;
-  if (p === "medien") return katalog.medien.find((m) => m.name === rest)?.text ?? rest;
-  return katalog.einfach.find((e) => e.name === f)?.text ?? f;
+  if (p === "text") return t("funktion.text", { text: rest.replace(/\n/g, "⏎") });
+  if (p === "medien") {
+    const e = katalog.medien.find((m) => m.name === rest);
+    return e ? katalogText("medien", e) : rest;
+  }
+  const e = katalog.einfach.find((e) => e.name === f);
+  return e ? katalogText("einfach", e) : f;
 }
 
-const ART_TITEL: Record<Art, string> = {
-  kombi: "Tastenkombination",
-  taste: "Taste",
-  text: "Text",
-  medien: "Medien",
-  sonstige: "Funktion",
-  keine: "Funktion wählen",
-};
+/** Katalogtext in der aktuellen Sprache (Deutsch liefert das Backend) */
+function katalogText(liste: "medien" | "einfach", e: Eintrag): string {
+  return (sprache === "en" && KATALOG_EN[liste][e.name]) || e.text;
+}
+
+const artTitel = (art: Art) => t(`titel.${art}`);
 
 // ---------------------------------------------------------------------------
 // Status / Meldungen
@@ -200,7 +209,7 @@ function fortschritt(prozent: number | null) {
 
 function sperren(an: boolean) {
   beschaeftigt = an;
-  document.querySelectorAll<HTMLButtonElement>(".fuss .knopf, .menue-liste button").forEach((b) => (b.disabled = an));
+  document.querySelectorAll<HTMLButtonElement>(".fuss .knopf, .menue-liste button[data-aktion]").forEach((b) => (b.disabled = an));
 }
 
 const schnappschuss = () => JSON.stringify(k);
@@ -210,8 +219,8 @@ function geaendert(mitMeldung = true) {
   const schmutzig = schnappschuss() !== gespeichert;
   $<HTMLButtonElement>("knopf-abbrechen").disabled = !schmutzig || beschaeftigt;
   if (!mitMeldung) return;
-  if (schmutzig) melden("Ungespeicherte Änderungen");
-  else if ($("meldung").textContent === "Ungespeicherte Änderungen") melden("");
+  if (schmutzig) melden(t("meldung.ungespeichert"));
+  else if ($("meldung").textContent === t("meldung.ungespeichert")) melden("");
 }
 
 // ---------------------------------------------------------------------------
@@ -253,8 +262,8 @@ function zeichneTastenfeld() {
   svg.replaceChildren();
   const p = profil();
 
-  k.taste.slice(0, 8).forEach((t, i) => {
-    const f = p.belegung[t.name];
+  k.taste.slice(0, 8).forEach((taste, i) => {
+    const f = p.belegung[taste.name];
     const art = artVon(f);
     const leer = art === "keine";
     const waehlen = () => {
@@ -268,7 +277,7 @@ function zeichneTastenfeld() {
     const kappe = document.createElement("button");
     kappe.className = "kappe " + (leer ? "leer" : "belegt") + (symbolFuer(f) ? " mit-symbol" : "");
     kappe.setAttribute("aria-pressed", String(i === gewaehlt));
-    kappe.setAttribute("aria-label", `Taste ${i + 1}: ${beschreibung(f)}`);
+    kappe.setAttribute("aria-label", t("kappe.aria", { n: i + 1, text: beschreibung(f) }));
     const sym = symbolFuer(f);
     if (sym) {
       const s = document.createElement("span");
@@ -286,8 +295,8 @@ function zeichneTastenfeld() {
     // Beschriftung
     const g = kappenGeometrie(i);
     const seite = seiteVon(i);
-    const name = p.bezeichnung?.[t.name];
-    const text = leer ? "Keine Funktion" : name ? `${name} (${beschreibung(f)})` : beschreibung(f);
+    const name = p.bezeichnung?.[taste.name];
+    const text = leer ? t("funktion.keine") : name ? `${name} (${beschreibung(f)})` : beschreibung(f);
 
     const el = document.createElement("div");
     el.className = `beschriftung ${seite}` + (leer ? " leer" : "") + (i === gewaehlt ? " aktiv" : "");
@@ -295,7 +304,7 @@ function zeichneTastenfeld() {
     el.title = text;
     const titel = document.createElement("span");
     titel.className = "titel";
-    titel.textContent = ART_TITEL[art];
+    titel.textContent = artTitel(art);
     const kasten = document.createElement("span");
     kasten.className = "kasten";
     if (sym) {
@@ -363,8 +372,8 @@ function zeichneProfile() {
     const b = document.createElement("button");
     b.setAttribute("role", "tab");
     b.setAttribute("aria-selected", String(i === profilIndex));
-    b.title = p.name + (liveProfil === i + 1 ? " – gerade am Gerät aktiv" : "");
-    b.textContent = `Profil ${i + 1}`;
+    b.title = p.name + (liveProfil === i + 1 ? t("profil.live") : "");
+    b.textContent = t("profil.tab", { n: i + 1 });
     if (liveProfil === i + 1) {
       const punkt = document.createElement("span");
       punkt.className = "live";
@@ -395,7 +404,7 @@ function fuelleAuswahl(sel: HTMLSelectElement, eintraege: { wert: string; text: 
 function zeichneEditor() {
   const name = tasteName();
   const f = name ? profil().belegung[name] : undefined;
-  $("editor-titel").textContent = `Taste ${gewaehlt + 1} anpassen`;
+  $("editor-titel").textContent = t("editor.titel", { n: gewaehlt + 1 });
   $<HTMLSelectElement>("aktionstyp").value = editorArt;
 
   document.querySelectorAll<HTMLElement>("#editor .feld[data-fuer]").forEach((el) => {
@@ -403,9 +412,9 @@ function zeichneEditor() {
   });
 
   const [p, rest] = f ? teile(f) : ["", ""];
-  $("aufnahme-titel").textContent = editorArt === "kombi" ? "Tasten-Kombi" : "Taste";
+  $("aufnahme-titel").textContent = t(editorArt === "kombi" ? "editor.kombi" : "editor.taste");
   const eingabe = $<HTMLInputElement>("eingabe-tasten");
-  eingabe.placeholder = editorArt === "kombi" ? "Strg + C" : "A";
+  eingabe.placeholder = editorArt === "kombi" ? `${anzeige("strg")} + C` : "A";
   eingabe.value =
     p === "kombi" && editorArt === "kombi"
       ? rest.split("+").map(anzeige).join(" + ")
@@ -418,9 +427,9 @@ function zeichneEditor() {
   if (document.activeElement !== textfeld) textfeld.value = p === "text" ? rest : "";
   $<HTMLSelectElement>("wahl-sonstige").value = artVon(f) === "sonstige" ? f! : "";
   $<HTMLInputElement>("eingabe-name").value = (name && profil().bezeichnung?.[name]) || "";
+  $("knopf-aufnahme").textContent = t(hoert ? "aufnahme.stopp" : "aufnahme.start");
   if (!hoert) {
-    $("aufnahme-hinweis").textContent =
-      editorArt === "kombi" ? "„Aufnehmen“ und Kombination gleichzeitig drücken." : "„Aufnehmen“ und gewünschte Taste drücken.";
+    $("aufnahme-hinweis").textContent = t(editorArt === "kombi" ? "aufnahme.hinweisKombi" : "aufnahme.hinweisTaste");
   }
 }
 
@@ -474,8 +483,8 @@ function aufnahmeStarten() {
   nurModifier = true;
   const b = $("knopf-aufnahme");
   b.classList.add("hoert");
-  b.textContent = "Stopp";
-  $("aufnahme-hinweis").textContent = "Ich höre zu …";
+  b.textContent = t("aufnahme.stopp");
+  $("aufnahme-hinweis").textContent = t("aufnahme.hoert");
 }
 
 function aufnahmeBeenden() {
@@ -483,7 +492,7 @@ function aufnahmeBeenden() {
   gedrueckt.clear();
   const b = $("knopf-aufnahme");
   b.classList.remove("hoert");
-  b.textContent = "Aufnehmen";
+  b.textContent = t("aufnahme.start");
   zeichneEditor();
 }
 
@@ -495,7 +504,7 @@ window.addEventListener(
     e.stopPropagation();
     const usage = CODE_ZU_HID[e.code];
     if (usage === undefined) {
-      $("aufnahme-hinweis").textContent = `„${e.code}“ wird nicht unterstützt.`;
+      $("aufnahme-hinweis").textContent = t("aufnahme.nichtUnterstuetzt", { code: e.code });
       return;
     }
     gedrueckt.add(usage);
@@ -508,7 +517,7 @@ window.addEventListener(
     if (mods.length === 0 && editorArt !== "kombi") {
       setzeFunktion(`taste:${tastenname(usage, false)}`);
     } else if (mods.length === 0) {
-      $("aufnahme-hinweis").textContent = "Für eine Kombination bitte z. B. Strg dazu halten – oder Aktionstyp „Einzelne Taste“.";
+      $("aufnahme-hinweis").textContent = t("aufnahme.ohneModifier");
       gedrueckt.delete(usage);
       return;
     } else {
@@ -543,33 +552,36 @@ window.addEventListener(
 
 async function statusAbfragen(still = false) {
   if (beschaeftigt) return;
-  const pille = $("geraet");
   const vorher = liveProfil;
   try {
     const s = await invoke<GeraeteStatus>("status");
-    pille.dataset.zustand = "verbunden";
+    verbunden = true;
     liveProfil = s.profil;
-    $("geraet-text").textContent = "Verbunden";
   } catch (e) {
-    pille.dataset.zustand = "getrennt";
+    verbunden = false;
     liveProfil = null;
-    $("geraet-text").textContent = "Nicht verbunden";
     if (!still) melden(String(e), "fehler");
   }
+  zeichneGeraet();
   if (vorher !== liveProfil) zeichneProfile();
+}
+
+function zeichneGeraet() {
+  $("geraet").dataset.zustand = verbunden === null ? "unbekannt" : verbunden ? "verbunden" : "getrennt";
+  $("geraet-text").textContent = t(verbunden === null ? "kopf.suche" : verbunden ? "kopf.verbunden" : "kopf.getrennt");
 }
 
 async function speichernUndAnwenden() {
   k.allgemein.aktives_profil = profilIndex + 1;
   sperren(true);
-  melden("Speichere und übertrage …");
+  melden(t("meldung.speichere"));
   try {
     await invoke("konfig_speichern", { konfiguration: k });
     gespeichert = schnappschuss();
     await invoke("anwenden", { konfiguration: k });
-    melden(`Gespeichert und übertragen – Profil ${profilIndex + 1} ist aktiv.`, "erfolg");
+    melden(t("meldung.gespeichertAktiv", { n: profilIndex + 1 }), "erfolg");
   } catch (e) {
-    melden(`Fehler: ${e}`, "fehler");
+    melden(t("meldung.fehler", { fehler: String(e) }), "fehler");
   } finally {
     sperren(false);
     geaendert(false);
@@ -581,14 +593,11 @@ function abbrechen() {
   k = JSON.parse(gespeichert);
   profilAuffuellen();
   zeichneAlles();
-  melden("Änderungen verworfen.");
+  melden(t("meldung.verworfen"));
 }
 
 async function werkseinstellungen() {
-  const ok = await ask(
-    "Alle drei Profile auf die Werksbelegung zurücksetzen?\n\nProfil 1: Ziffern 1–8 · Profil 2: Medien · Profil 3: F13–F20\n\nDas Gerät ändert sich erst mit „Speichern & Anwenden“.",
-    { title: "Werkseinstellungen", kind: "warning" },
-  );
+  const ok = await ask(t("dialog.werkText"), { title: t("dialog.werkTitel"), kind: "warning" });
   if (!ok) return;
   k = await invoke<Konfiguration>("beispiel");
   profilAuffuellen();
@@ -596,14 +605,11 @@ async function werkseinstellungen() {
 }
 
 async function auslesen() {
-  const ok = await ask("Die Belegung im Fenster wird durch die Daten aus dem Gerät ersetzt. Fortfahren?", {
-    title: "Vom Gerät lesen",
-    kind: "warning",
-  });
+  const ok = await ask(t("dialog.lesenText"), { title: t("dialog.lesenTitel"), kind: "warning" });
   if (!ok) return;
   sperren(true);
   fortschritt(0);
-  melden("Lese Gerätespeicher …");
+  melden(t("meldung.lese"));
   try {
     const neu = await invoke<Konfiguration>("auslesen", { tasten: k.taste });
     // Namen gibt es nur in der Datei
@@ -614,9 +620,9 @@ async function auslesen() {
     k = neu;
     profilAuffuellen();
     zeichneAlles();
-    melden("Aus dem Gerät gelesen. Makros des Original-Programms erscheinen als „Keine Funktion“.", "erfolg");
+    melden(t("meldung.gelesen"), "erfolg");
   } catch (e) {
-    melden(`Lesen fehlgeschlagen: ${e}`, "fehler");
+    melden(t("meldung.lesenFehler", { fehler: String(e) }), "fehler");
   } finally {
     fortschritt(null);
     sperren(false);
@@ -628,9 +634,9 @@ async function profilAktivieren() {
   sperren(true);
   try {
     await invoke("profil_aktivieren", { nummer: profilIndex + 1 });
-    melden(`Profil ${profilIndex + 1} am Gerät aktiviert.`, "erfolg");
+    melden(t("meldung.aktiviert", { n: profilIndex + 1 }), "erfolg");
   } catch (e) {
-    melden(`Profilwechsel fehlgeschlagen: ${e}`, "fehler");
+    melden(t("meldung.aktivierenFehler", { fehler: String(e) }), "fehler");
   } finally {
     sperren(false);
     geaendert(false);
@@ -638,28 +644,28 @@ async function profilAktivieren() {
   }
 }
 
-const FILTER = [{ name: "Konfiguration", extensions: ["toml"] }];
+const filter = () => [{ name: t("datei.filter"), extensions: ["toml"] }];
 
 async function dateiOeffnen() {
-  const pfad = await open({ filters: FILTER, multiple: false, directory: false });
+  const pfad = await open({ filters: filter(), multiple: false, directory: false });
   if (typeof pfad !== "string") return;
   try {
     k = await invoke<Konfiguration>("datei_oeffnen", { pfad });
     profilAuffuellen();
     gewaehlt = 0;
     zeichneAlles();
-    melden(`Geöffnet: ${pfad} – mit „Speichern & Anwenden“ übernehmen.`);
+    melden(t("meldung.geoeffnet", { pfad }));
   } catch (e) {
     melden(String(e), "fehler");
   }
 }
 
 async function dateiSpeichern() {
-  const pfad = await save({ filters: FILTER, defaultPath: "konfiguration.toml" });
+  const pfad = await save({ filters: filter(), defaultPath: "konfiguration.toml" });
   if (!pfad) return;
   try {
     await invoke("datei_speichern", { pfad, konfiguration: k });
-    melden(`Gespeichert: ${pfad}`, "erfolg");
+    melden(t("meldung.gespeichert", { pfad }), "erfolg");
   } catch (e) {
     melden(String(e), "fehler");
   }
@@ -693,10 +699,16 @@ function verdrahten() {
     oeffnen: dateiOeffnen,
     "speichern-unter": dateiSpeichern,
   };
-  document.querySelectorAll<HTMLButtonElement>(".menue-liste button").forEach((b) =>
+  document.querySelectorAll<HTMLButtonElement>(".menue-liste button[data-aktion]").forEach((b) =>
     b.addEventListener("click", () => {
       menueSchalten(false);
       aktionen[b.dataset.aktion!]();
+    }),
+  );
+  document.querySelectorAll<HTMLButtonElement>("#sprachwahl button").forEach((b) =>
+    b.addEventListener("click", (e) => {
+      e.stopPropagation(); // Menü offen lassen
+      spracheWechseln(b.dataset.sprache as Sprache);
     }),
   );
 
@@ -767,22 +779,50 @@ function verdrahten() {
   new ResizeObserver(skalieren).observe(document.querySelector(".buehne-rahmen")!);
 }
 
+// ---------------------------------------------------------------------------
+// Sprache
+// ---------------------------------------------------------------------------
+
+function fuelleListen() {
+  const leer = { wert: "", text: t("editor.waehlen") };
+  fuelleAuswahl($("wahl-taste"), [
+    leer,
+    ...katalog.tasten.filter((e) => e.name !== "plus").map((e) => ({ wert: e.name, text: anzeige(e.name) })),
+  ]);
+  fuelleAuswahl($("wahl-medien"), [leer, ...katalog.medien.map((m) => ({ wert: m.name, text: katalogText("medien", m) }))]);
+  fuelleAuswahl($("wahl-sonstige"), [
+    leer,
+    ...katalog.einfach.filter((e) => e.name !== "aus").map((e) => ({ wert: e.name, text: katalogText("einfach", e) })),
+  ]);
+}
+
+/** Statische Texte, Auswahllisten und Sprachumschalter in der aktuellen Sprache */
+function spracheAnwenden() {
+  seiteUebersetzen();
+  document.querySelectorAll<HTMLButtonElement>("#sprachwahl button").forEach((b) =>
+    b.setAttribute("aria-checked", String(b.dataset.sprache === sprache)),
+  );
+  fuelleListen();
+  invoke("sprache_setzen", { englisch: sprache === "en" }).catch(() => {});
+}
+
+function spracheWechseln(s: Sprache) {
+  if (s === sprache) return;
+  spracheSetzen(s);
+  spracheAnwenden();
+  zeichneGeraet();
+  zeichneAlles();
+}
+
 async function starten() {
   katalog = await invoke<Katalog>("katalog");
-  fuelleAuswahl($("wahl-taste"), [
-    { wert: "", text: "– wählen –" },
-    ...katalog.tasten.filter((t) => t.name !== "plus").map((t) => ({ wert: t.name, text: anzeige(t.name) })),
-  ]);
-  fuelleAuswahl($("wahl-medien"), [{ wert: "", text: "– wählen –" }, ...katalog.medien.map((m) => ({ wert: m.name, text: m.text }))]);
-  fuelleAuswahl($("wahl-sonstige"), [
-    { wert: "", text: "– wählen –" },
-    ...katalog.einfach.filter((e) => e.name !== "aus").map((e) => ({ wert: e.name, text: e.text })),
-  ]);
+  spracheAnwenden();
+  zeichneGeraet();
 
   try {
     k = await invoke<Konfiguration>("konfig_laden");
   } catch (e) {
-    melden(`Gespeicherte Konfiguration fehlerhaft, Beispiel geladen: ${e}`, "fehler");
+    melden(t("meldung.konfigFehlerhaft", { fehler: String(e) }), "fehler");
     k = await invoke<Konfiguration>("beispiel");
   }
   profilAuffuellen();

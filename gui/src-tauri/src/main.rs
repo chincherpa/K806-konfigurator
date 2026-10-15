@@ -1,15 +1,17 @@
 // Kein Konsolenfenster im Release-Build unter Windows
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod geraet;
+
 use std::path::PathBuf;
 use std::sync::Mutex;
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
-use x806_konfig::aktionen::{self, GeraeteStatus};
-use x806_konfig::funktionen;
-use x806_konfig::konfig::{Konfiguration, Taste};
+use geraet::aktionen::{self, GeraeteStatus};
+use geraet::funktionen;
+use geraet::konfig::{Konfiguration, Taste};
 
 /// Serialisiert alle Gerätezugriffe – das HID-Gerät verträgt keine parallelen Befehle.
 struct Geraetesperre(Mutex<()>);
@@ -79,6 +81,11 @@ fn konfig_speichern(app: AppHandle, konfiguration: Konfiguration) -> Ergebnis<()
 }
 
 #[tauri::command]
+fn sprache_setzen(englisch: bool) {
+    geraet::sprache::setzen(englisch);
+}
+
+#[tauri::command]
 fn beispiel() -> Konfiguration {
     aktionen::beispiel()
 }
@@ -124,13 +131,13 @@ async fn auslesen(app: AppHandle, tasten: Vec<Taste>) -> Ergebnis<Konfiguration>
     tauri::async_runtime::spawn_blocking(move || {
         let sperre = app.state::<Geraetesperre>();
         let _g = sperre.0.lock().unwrap();
-        let a = aktionen::auslesen(&Default::default(), &tasten, false, &mut |n, gesamt| {
+        let konfiguration = aktionen::auslesen(&Default::default(), &tasten, false, &mut |n, gesamt| {
             if n % 16 == 0 || n == gesamt {
                 let _ = app.emit("fortschritt", (n * 100 / gesamt) as u32);
             }
         })
         .map_err(fehler)?;
-        Ok(a.konfiguration)
+        Ok(konfiguration)
     })
     .await
     .map_err(|e| e.to_string())?
@@ -163,6 +170,7 @@ fn main() {
             anwenden,
             auslesen,
             profil_aktivieren,
+            sprache_setzen,
         ])
         .run(tauri::generate_context!())
         .expect("K806 Konfigurator konnte nicht gestartet werden");
