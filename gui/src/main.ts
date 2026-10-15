@@ -6,7 +6,7 @@ import { ask, open, save } from "@tauri-apps/plugin-dialog";
 // Typen (spiegeln die Rust-Strukturen in src/konfig.rs)
 // ---------------------------------------------------------------------------
 
-type LedModus = "dpi_atmen" | "zyklus_atmen" | "dauerlicht" | "tastenreaktion" | "aus" | "einzel_atmen";
+type LedModus = "zyklus_atmen" | "dauerlicht" | "tastenreaktion" | "aus" | "einzel_atmen";
 
 interface Taste {
   name: string;
@@ -23,9 +23,7 @@ interface Profil {
 interface Konfiguration {
   geraet: { vendor_id: number; product_id: number; bericht_laenge: number };
   allgemein: { aktives_profil: number; abfragerate_hz: number; dauerfeuer_ms: number; tippverzoegerung: number };
-  dpi: unknown;
   beleuchtung: { modus: LedModus; helligkeit: number; geschwindigkeit: number; [x: string]: unknown };
-  windows: unknown;
   taste: Taste[];
   profil: Profil[];
   erweitert: unknown;
@@ -613,7 +611,6 @@ async function auslesen() {
       p.name = k.profil[i]?.name ?? p.name;
       p.bezeichnung = k.profil[i]?.bezeichnung ?? {};
     });
-    neu.windows = k.windows;
     k = neu;
     profilAuffuellen();
     zeichneAlles();

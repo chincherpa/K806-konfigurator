@@ -30,9 +30,13 @@ const DATEN_ENDE: u16 = 0x7F8;
 /// Profil 1–3 der Konfiguration -> Hardware-Profil (wie im Original; 1 ist verborgen)
 pub const HW_PROFIL: [u8; 3] = [0, 2, 3];
 
-const DPI_CODES: [u8; 17] = [
-    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12,
-];
+/// DPI-Bereich 0x13–0x18 der Maus-Firmware, fest mit den Standardwerten des Originals
+/// (sechs Stufen, Stufe 1 aktiv) – am Tastenfeld ohne Wirkung
+const DPI_BYTES: [u8; 6] = [0x38, 0x08, 0x6C, 0xF2, 0x02, 0x18];
+/// Alle vier DPI-Freigabebits in 0x1D gesetzt
+const DPI_FREIGABE: u8 = 0x55;
+/// DPI-Farben 0x20–0x31 (6 × R,G,B, je 4 Bit), Standardwerte des Originals
+const DPI_FARBEN: [u8; 18] = [0, 15, 15, 15, 15, 0, 15, 0, 0, 15, 7, 11, 0, 0, 15, 7, 15, 7];
 
 /// Adresse des Funktionsbytes für Hardware-Profil (0–3) und Steckplatz (1–11)
 pub fn tasten_adresse(hw_profil: u8, steckplatz: u8) -> u16 {
@@ -117,27 +121,16 @@ pub fn abbild_erstellen(k: &Konfiguration, geraeteflags: u8) -> Result<[u8; GROE
     m[0x4F] = byte(2, 1);
     m[0x5B] = byte(3, 1);
 
-    // DPI (bei Tastaturen ohne Wirkung, wird aber wie im Original gesendet)
-    let codes: Vec<u8> = k.dpi.stufe.iter().map(|s| DPI_CODES[s.wert as usize]).collect();
-    m[0x13] = codes.iter().enumerate().fold(0, |acc, (i, c)| acc | ((c >> 4) & 1) << i);
-    m[0x14] = 0x08;
-    for i in 0..3 {
-        m[0x15 + i] = (codes[2 * i] & 0x0F) << 4 | (codes[2 * i + 1] & 0x0F);
-    }
+    m[0x13..0x19].copy_from_slice(&DPI_BYTES);
 
     let b = &k.beleuchtung;
-    m[0x18] = 0x18 | ((k.dpi.aktive_stufe - 1) & 7);
     m[0x19] = b.zyklus_farben.iter().enumerate().fold(0, |acc, (i, &an)| acc | (an as u8) << i);
     m[0x1A..0x1C].copy_from_slice(&(k.allgemein.dauerfeuer_ms / 8).to_le_bytes());
     m[0x1C] = led_byte(b);
-    let en: Vec<u8> = k.dpi.stufe.iter().map(|s| s.aktiv as u8).collect();
-    m[0x1D] = ((en[0] | en[1] << 2 | en[2] << 4 | en[3] << 6) & 0x7F) | (b.benutzerfarbe_aktiv as u8) << 7;
+    m[0x1D] = DPI_FREIGABE | (b.benutzerfarbe_aktiv as u8) << 7;
     m[0x1E] = abfrage_code(k.allgemein.abfragerate_hz);
 
-    for (i, s) in k.dpi.stufe.iter().enumerate() {
-        let f = farbe_lesen(&s.farbe)?;
-        m[0x20 + i * 3..0x23 + i * 3].copy_from_slice(&f);
-    }
+    m[0x20..0x32].copy_from_slice(&DPI_FARBEN);
     m[0x32] = 0x07;
     m[0x33] = 0x30;
 
@@ -265,36 +258,20 @@ pub fn makro_bloecke(k: &Konfiguration, abbild: &[u8; GROESSE]) -> Result<Vec<(u
     Ok(bloecke)
 }
 
-fn hex_farbe(f: &[u8]) -> String {
-    format!("#{:02X}{:02X}{:02X}", f[0] * 17, f[1] * 17, f[2] * 17)
-}
-
 /// Übersetzt ausgelesene Daten zurück in eine Konfiguration.
 /// `tabelle` = Bytes ab 0xA0 (TABELLE_GROESSE lang).
 pub fn dekodieren(m: &[u8; GROESSE], tabelle: &[u8], tasten: &[Taste]) -> Konfiguration {
     let hw_aktiv = m[ADR_GERAETEFLAGS as usize] & 3;
     let aktives_profil = HW_PROFIL.iter().position(|&p| p == hw_aktiv).unwrap_or(0) as u8 + 1;
 
-    let dpi_codes: Vec<u8> = (0..6)
-        .map(|i| {
-            let nib = m[0x15 + i / 2] >> (if i % 2 == 0 { 4 } else { 0 }) & 0x0F;
-            nib | ((m[0x13] >> i) & 1) << 4
-        })
-        .collect();
-    let en = [m[0x1D] & 1, m[0x1D] >> 2 & 1, m[0x1D] >> 4 & 1, m[0x1D] >> 6 & 1, 1, 1];
-    let stufe = (0..6)
-        .map(|i| DpiStufe {
-            wert: DPI_CODES.iter().position(|&c| c == dpi_codes[i]).unwrap_or(0) as u8,
-            aktiv: en[i] == 1,
-            farbe: hex_farbe(&m[0x20 + i * 3..0x23 + i * 3]),
-        })
-        .collect();
-
     let led = m[0x1C];
     let modus = match (led >> 4 & 7, led >> 3 & 1, led & 7) {
         (_, 1, _) => LedModus::Tastenreaktion,
         (0, 0, 7) => LedModus::Aus,
-        (0, _, _) => LedModus::DpiAtmen,
+        (0, _, _) => {
+            eprintln!("Hinweis: LED-Modus „DPI-Atmen“ (Maus) – als \"zyklus_atmen\" übernommen.");
+            LedModus::ZyklusAtmen
+        }
         (1, _, _) => LedModus::ZyklusAtmen,
         (2, _, _) => LedModus::Dauerlicht,
         _ => LedModus::EinzelAtmen,
@@ -350,7 +327,6 @@ pub fn dekodieren(m: &[u8; GROESSE], tabelle: &[u8], tasten: &[Taste]) -> Konfig
             dauerfeuer_ms: w(0x1A).saturating_mul(8).clamp(8, 2040),
             ..Allgemein::default()
         },
-        dpi: Dpi { aktive_stufe: (m[0x18] & 7).min(5) + 1, stufe },
         beleuchtung: Beleuchtung {
             modus,
             helligkeit: m[0x3F] >> 4 & 7,
@@ -361,7 +337,6 @@ pub fn dekodieren(m: &[u8; GROESSE], tabelle: &[u8], tasten: &[Taste]) -> Konfig
             symmetrie: m[0x3A] & 0x40 != 0,
             richtung: m[0x3A] >> 4 & 3,
         },
-        windows: WindowsEinstellungen::default(),
         taste: alle_tasten,
         profil,
         erweitert: Erweitert {
@@ -371,6 +346,8 @@ pub fn dekodieren(m: &[u8; GROESSE], tabelle: &[u8], tasten: &[Taste]) -> Konfig
             werte_0x70: [w(0x70), w(0x72), w(0x74)],
             led_effekt_nibble: m[0x3A] & 0x0F,
         },
+        alt_dpi: Default::default(),
+        alt_windows: Default::default(),
     }
 }
 
@@ -392,6 +369,30 @@ mod tests {
             }
         }
         t
+    }
+
+    #[test]
+    fn alte_maus_abschnitte_werden_ignoriert() {
+        let alt = include_str!("../konfiguration.toml").replace(
+            "[beleuchtung]
+modus = \"aus\"",
+            "[dpi]
+aktive_stufe = 1
+
+[[dpi.stufe]]
+wert = 5
+farbe = \"#00FFFF\"
+
+[windows]
+
+[beleuchtung]
+modus = \"dpi_atmen\"",
+        );
+        assert_ne!(alt, include_str!("../konfiguration.toml"));
+        let k: Konfiguration = toml::from_str(&alt).unwrap();
+        assert_eq!(k.beleuchtung.modus, LedModus::ZyklusAtmen);
+        let neu = toml::to_string(&k).unwrap();
+        assert!(!neu.contains("dpi") && !neu.contains("[windows]"));
     }
 
     #[test]
