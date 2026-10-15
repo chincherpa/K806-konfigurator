@@ -1,33 +1,65 @@
-# ============================================================
-#  K806 / X806 – Tastenfeld mit 8 Tasten
-#  Übertragen mit:   x806 anwenden konfiguration.toml
-#  Erst testen mit:  x806 anwenden konfiguration.toml --trocken
-#  Alle Funktionen:  x806 funktionen
-# ============================================================
-
+# K806 / X806 – gespeichert vom K806 Konfigurator
 [geraet]
-vendor_id = 0x30FA
-product_id = 0x1340
-bericht_laenge = 8          # Feature-Report-Länge inkl. Report-ID
+vendor_id = 12538
+product_id = 4928
+bericht_laenge = 8
 
 [allgemein]
-aktives_profil = 1          # 1–3
-abfragerate_hz = 1000       # 125 | 250 | 500 | 1000
-tippverzoegerung = 15       # 1–127, Pause je Ereignis bei text: (kleiner = schneller; Original 15)
+aktives_profil = 1
+abfragerate_hz = 1000
+dauerfeuer_ms = 50
+tippverzoegerung = 20
 
-# ------------------------------------------------------------
-#  Beleuchtung
-#  modus: dpi_atmen | zyklus_atmen | dauerlicht | tastenreaktion | aus | einzel_atmen
-# ------------------------------------------------------------
+[dpi]
+aktive_stufe = 1
+
+[[dpi.stufe]]
+wert = 5
+aktiv = true
+farbe = "#00FFFF"
+
+[[dpi.stufe]]
+wert = 10
+aktiv = true
+farbe = "#FFFF00"
+
+[[dpi.stufe]]
+wert = 13
+aktiv = true
+farbe = "#FF0000"
+
+[[dpi.stufe]]
+wert = 16
+aktiv = true
+farbe = "#FF77BB"
+
+[[dpi.stufe]]
+wert = 14
+aktiv = true
+farbe = "#0000FF"
+
+[[dpi.stufe]]
+wert = 16
+aktiv = true
+farbe = "#77FF77"
+
 [beleuchtung]
-modus = "zyklus_atmen"
-helligkeit = 4              # 0–7
-geschwindigkeit = 3         # 0–7 (kleiner = schneller)
+modus = "aus"
+helligkeit = 4
+geschwindigkeit = 3
+zyklus_farben = [
+    false,
+    false,
+    false,
+    false,
+]
+benutzerfarbe_aktiv = false
+einzelfarbe = false
+symmetrie = false
+richtung = 0
 
-# ------------------------------------------------------------
-#  Die 8 Tasten. Namen frei wählbar, `steckplatz` = Position in der Firmware.
-#  Reihenfolge wie im Original-Programm (K1 … K8).
-# ------------------------------------------------------------
+[windows]
+
 [[taste]]
 name = "t1"
 steckplatz = 7
@@ -60,28 +92,25 @@ steckplatz = 5
 name = "t8"
 steckplatz = 4
 
-# ------------------------------------------------------------
-#  Profile 1–3
-#    taste:<name>    eine Tastaturtaste, z. B. taste:a  taste:f13  taste:eingabe
-#    medien:<name>   z. B. medien:lauter  medien:abspielen
-#    profil_1 …      zu einem anderen Profil wechseln
-# ------------------------------------------------------------
-
-# Profil 1: Ziffern 1–8 (Werkseinstellung)
 [[profil]]
 name = "Ziffern"
 
 [profil.belegung]
-t1 = "taste:1"
+t1 = "text:beispiel@example.com"
 t2 = "taste:2"
 t3 = "taste:3"
-t4 = "taste:4"
-t5 = "taste:5"
+t4 = "text:0000"
+t5 = "text:beispiel"
 t6 = "taste:6"
-t7 = "taste:7"
-t8 = "taste:8"
+t7 = "taste:eingabe"
+t8 = "text:ABCDEFG"
 
-# Profil 2: Medien
+[profil.led_reaktion]
+
+[profil.bezeichnung]
+t1 = "Email"
+t4 = "PIN"
+
 [[profil]]
 name = "Medien"
 
@@ -95,7 +124,8 @@ t6 = "medien:lauter"
 t7 = "medien:rechner"
 t8 = "profil_1"
 
-# Profil 3: F13–F20 (frei in Programmen belegbar)
+[profil.led_reaktion]
+
 [[profil]]
 name = "Makrotasten"
 
@@ -108,3 +138,17 @@ t5 = "taste:f17"
 t6 = "taste:f18"
 t7 = "taste:f19"
 t8 = "taste:f20"
+
+[profil.led_reaktion]
+
+[erweitert]
+flag_0x43 = false
+wert_0x6e = 0
+werte_0x70 = [
+    0,
+    0,
+    0,
+]
+led_effekt_nibble = 0
+
+[erweitert.rohdaten]

@@ -140,7 +140,9 @@ Byte 8  0x0A bei Makros, sonst 0
 Byte 9  0
 ```
 
-Funktionscode im Tastenbyte: `0x0E` Taste/Makro, `0x0F` Medien.
+Funktionscode im Tastenbyte (Original `0x413E55`): `0x0E` nur Einzeltaste (Firmware liest nur Byte 2),
+`0x0D` Tastenkürzel, `0x1E` Benutzermakro (`0x1F` = Wiederholmodus), `0x0F` Medien.
+Mehrere Ereignisse unter `0x0E` werden von der Firmware ignoriert.
 
 ## Tastendaten (ab 0x400)
 

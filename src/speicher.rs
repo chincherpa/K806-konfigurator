@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 use anyhow::{bail, Result};
 
-use crate::funktionen::{self, Funktion, CODE_MEDIEN, CODE_TASTE};
+use crate::funktionen::{self, Funktion, CODE_KOMBI, CODE_MAKRO, CODE_MEDIEN, CODE_TASTE};
 use crate::konfig::*;
 
 pub const GROESSE: usize = 0x80;
@@ -321,7 +321,7 @@ pub fn dekodieren(m: &[u8; GROESSE], tabelle: &[u8], tasten: &[Taste]) -> Konfig
                 let e = &tabelle[eintrag_index(p, h) * EINTRAG..][..EINTRAG];
                 let f = match b & 0x1F {
                     CODE_TASTE if e[1] == 1 => Funktion::Taste(e[2]),
-                    CODE_TASTE => {
+                    CODE_TASTE | CODE_KOMBI | CODE_MAKRO | 0x1F => {
                         eprintln!(
                             "Hinweis: Profil {}, Taste \"{name}\" enthält ein Makro ({} Ereignisse) – als \"aus\" übernommen.",
                             i + 1,
@@ -425,6 +425,7 @@ mod tests {
         let mut k = beispiel();
         k.profil[0].belegung.insert("t1".into(), "kombi:strg+c".into());
         let m = abbild_erstellen(&k, 0).unwrap();
+        assert_eq!(m[0x0E] & 0x1F, CODE_KOMBI);
         let b = makro_bloecke(&k, &m).unwrap();
         let e = &tabelle_aus(&b)[eintrag_index(0, 7) * EINTRAG..][..EINTRAG];
         assert_eq!((e[1], e[2], e[8]), (4, 0, 0x0A));
@@ -440,7 +441,7 @@ mod tests {
         let mut k = beispiel();
         k.profil[0].belegung.insert("t1".into(), "text:a@b".into());
         let m = abbild_erstellen(&k, 0).unwrap();
-        assert_eq!(m[0x0E] & 0x1F, CODE_TASTE);
+        assert_eq!(m[0x0E] & 0x1F, CODE_KOMBI);
         let b = makro_bloecke(&k, &m).unwrap();
         let e = &tabelle_aus(&b)[eintrag_index(0, 7) * EINTRAG..][..EINTRAG];
         assert_eq!((e[1], e[8]), (8, 0x0A)); // a(2) + @(4) + b(2)

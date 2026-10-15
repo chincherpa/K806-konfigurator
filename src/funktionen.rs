@@ -30,14 +30,21 @@ pub const TEXT_MAX: usize = 120;
 const UMSCHALT: u8 = 0xE1;
 const ALTGR: u8 = 0xE6;
 
+/// Funktionscodes wie im Original (X806.exe 0x413E55 ff.): 0x0E nur für Einzeltasten –
+/// die Firmware liest dort nur Byte 2 des Tabelleneintrags, mehrere Ereignisse werden ignoriert.
+pub const CODE_KOMBI: u8 = 0x0D;
 pub const CODE_TASTE: u8 = 0x0E;
 pub const CODE_MEDIEN: u8 = 0x0F;
+/// Benutzermakro, einmal abspielen (0x1F wäre „wiederholen solange gedrückt“)
+pub const CODE_MAKRO: u8 = 0x1E;
 
 impl Funktion {
     pub fn code(&self) -> u8 {
         match self {
             Funktion::Einfach(c) => *c,
-            Funktion::Taste(_) | Funktion::Kombi(..) | Funktion::Text(_) => CODE_TASTE,
+            Funktion::Taste(_) => CODE_TASTE,
+            // 0x1E (Benutzermakro) spielt am Gerät nichts ab – 0x0D trägt dasselbe Datenformat
+            Funktion::Kombi(..) | Funktion::Text(_) => CODE_KOMBI,
             Funktion::Medien(_) => CODE_MEDIEN,
         }
     }
@@ -217,8 +224,8 @@ pub fn kodieren(text: &str) -> Result<Funktion> {
     }
     if let Some(roh) = n.strip_prefix("roh:") {
         let v = zahl_lesen(roh)?;
-        if v > 0x1F || v == CODE_TASTE as u32 || v == CODE_MEDIEN as u32 {
-            bail!("Rohcode {roh} ungültig (max. 0x1F, 0x0E/0x0F über taste:/medien:)");
+        if v > 0x1F || [CODE_KOMBI, CODE_TASTE, CODE_MEDIEN, CODE_MAKRO].contains(&(v as u8)) {
+            bail!("Rohcode {roh} ungültig (max. 0x1F; 0x0D/0x0E/0x0F/0x1E brauchen Tastendaten)");
         }
         return Ok(Funktion::Einfach(v as u8));
     }
