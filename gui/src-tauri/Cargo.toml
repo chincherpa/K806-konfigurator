@@ -1,0 +1,17 @@
+[package]
+name = "k806-konfigurator"
+version = "0.1.0"
+edition = "2021"
+description = "Grafische Oberfläche für das K806/X806-Tastenfeld"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+anyhow = "1"
+x806-konfig = { path = "../.." }

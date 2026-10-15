@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>K806 Konfigurator</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+  <body>
+    <div class="fenster">
+      <header class="kopf">
+        <div class="marke">
+          <span class="marke-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h1M9.5 10h1M13 10h1M16.5 10h1M6 13.5h1M8.5 14h7M16.5 13.5h1"/></svg>
+          </span>
+          <h1>K806 Konfigurator</h1>
+        </div>
+
+        <div class="profilwahl" id="profilwahl" role="tablist" aria-label="Profil"></div>
+
+        <div class="kopf-rechts">
+          <div class="geraet" id="geraet" data-zustand="unbekannt" title="Gerätestatus">
+            <span class="punkt"></span><span id="geraet-text">Suche Gerät …</span>
+          </div>
+          <div class="menue">
+            <button class="symbolknopf" id="knopf-menue" aria-haspopup="menu" aria-expanded="false" title="Weitere Aktionen">
+              <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+            </button>
+            <div class="menue-liste" id="menue-liste" role="menu" hidden>
+              <button role="menuitem" data-aktion="auslesen">Vom Gerät lesen</button>
+              <button role="menuitem" data-aktion="aktivieren">Profil am Gerät aktivieren</button>
+              <hr />
+              <button role="menuitem" data-aktion="oeffnen">Konfiguration öffnen …</button>
+              <button role="menuitem" data-aktion="speichern-unter">Konfiguration speichern unter …</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="inhalt">
+        <section class="buehne-rahmen" aria-label="Tastenfeld">
+          <div class="buehne" id="buehne">
+            <svg class="linien" id="linien" aria-hidden="true"></svg>
+            <div class="geraetkoerper" id="geraetkoerper">
+              <div class="tastenfeld" id="tastenfeld"></div>
+            </div>
+            <div id="beschriftungen"></div>
+          </div>
+        </section>
+
+        <aside class="seite">
+          <section class="karte" id="editor" aria-labelledby="editor-titel">
+            <h2 id="editor-titel">Taste 1 anpassen</h2>
+
+            <label class="feld">Aktionstyp
+              <span class="auswahl">
+                <select id="aktionstyp">
+                  <option value="kombi">Tastenkombination</option>
+                  <option value="taste">Einzelne Taste</option>
+                  <option value="text">Text tippen</option>
+                  <option value="medien">Medien</option>
+                  <option value="sonstige">Sonstige Funktion</option>
+                  <option value="keine">Keine</option>
+                </select>
+              </span>
+            </label>
+
+            <div class="feld" data-fuer="kombi taste">
+              <span class="feld-titel" id="aufnahme-titel">Tasten-Kombi</span>
+              <div class="zeile">
+                <input type="text" id="eingabe-tasten" spellcheck="false" autocomplete="off" />
+                <button class="knopf" id="knopf-aufnahme">Aufnehmen</button>
+              </div>
+              <span class="hinweis" id="aufnahme-hinweis"></span>
+            </div>
+
+            <label class="feld" data-fuer="taste">Aus Liste (z. B. F13–F24)
+              <span class="auswahl"><select id="wahl-taste"></select></span>
+            </label>
+
+            <label class="feld" data-fuer="text">Text
+              <textarea id="eingabe-text" rows="3" maxlength="120" spellcheck="false" placeholder="name@beispiel.de"></textarea>
+              <span class="hinweis">Wird wie getippt eingegeben (deutsches Tastaturlayout). Zeilenumbruch = Enter. Nicht möglich: ^ ´ `</span>
+            </label>
+
+            <label class="feld" data-fuer="medien">Medienfunktion
+              <span class="auswahl"><select id="wahl-medien"></select></span>
+            </label>
+
+            <label class="feld" data-fuer="sonstige">Funktion
+              <span class="auswahl"><select id="wahl-sonstige"></select></span>
+            </label>
+
+            <label class="feld" data-fuer="kombi taste text medien sonstige">
+              <span>Namen <span class="leise">(optional)</span></span>
+              <input type="text" id="eingabe-name" maxlength="32" autocomplete="off" />
+            </label>
+
+            <p class="fehlertext" id="editor-fehler" role="alert"></p>
+          </section>
+
+          <details class="karte klappkarte">
+            <summary>Beleuchtung &amp; Gerät</summary>
+            <label class="feld">Lichtmodus
+              <span class="auswahl">
+                <select id="led-modus">
+                  <option value="dauerlicht">Dauerlicht</option>
+                  <option value="zyklus_atmen">Zyklus-Atmen</option>
+                  <option value="einzel_atmen">Einzel-Atmen</option>
+                  <option value="dpi_atmen">DPI-Atmen</option>
+                  <option value="tastenreaktion">Tastenreaktion</option>
+                  <option value="aus">Aus</option>
+                </select>
+              </span>
+            </label>
+            <label class="feld">Helligkeit <output id="led-hell-wert"></output>
+              <input type="range" id="led-hell" min="0" max="7" step="1" />
+            </label>
+            <label class="feld">Tempo <output id="led-tempo-wert"></output>
+              <input type="range" id="led-tempo" min="0" max="7" step="1" />
+            </label>
+            <label class="feld">Abfragerate
+              <span class="auswahl">
+                <select id="abfragerate">
+                  <option value="125">125 Hz</option>
+                  <option value="250">250 Hz</option>
+                  <option value="500">500 Hz</option>
+                  <option value="1000">1000 Hz</option>
+                </select>
+              </span>
+            </label>
+            <label class="feld" title="Pause je Tastenereignis beim Tippen von Text. Kleiner = schneller; zu schnell gehen Zeichen verloren. Original: 15">
+              Tippverzögerung <output id="tippverzoegerung-wert"></output>
+              <input type="range" id="tippverzoegerung" min="1" max="127" step="1" />
+            </label>
+          </details>
+        </aside>
+      </main>
+
+      <footer class="fuss">
+        <button class="knopf" id="knopf-werk">Werkseinstellungen</button>
+        <div class="status">
+          <div class="fortschritt" id="fortschritt" hidden><div id="fortschritt-balken"></div></div>
+          <span id="meldung"></span>
+        </div>
+        <button class="knopf" id="knopf-abbrechen">Abbrechen</button>
+        <button class="knopf primaer" id="knopf-anwenden">Speichern &amp; Anwenden</button>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,30 @@
+# --- Rust ---
+/target/
+gui/src-tauri/target/
+**/*.rs.bk
+*.pdb
+
+# --- Tauri (generiert beim Build) ---
+gui/src-tauri/gen/schemas/
+
+# --- GUI / Node ---
+node_modules/
+gui/dist/
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+
+# --- Geräte-Ausgaben & Protokolle (lokal, gerätespezifisch) ---
+*.log
+ausgelesen.toml
+aktuell.toml
+sicherung_*.txt
+
+# --- Editor / OS ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

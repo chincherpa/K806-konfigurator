@@ -1,0 +1,110 @@
+# ============================================================
+#  K806 / X806 – Tastenfeld mit 8 Tasten
+#  Übertragen mit:   x806 anwenden konfiguration.toml
+#  Erst testen mit:  x806 anwenden konfiguration.toml --trocken
+#  Alle Funktionen:  x806 funktionen
+# ============================================================
+
+[geraet]
+vendor_id = 0x30FA
+product_id = 0x1340
+bericht_laenge = 8          # Feature-Report-Länge inkl. Report-ID
+
+[allgemein]
+aktives_profil = 1          # 1–3
+abfragerate_hz = 1000       # 125 | 250 | 500 | 1000
+tippverzoegerung = 15       # 1–127, Pause je Ereignis bei text: (kleiner = schneller; Original 15)
+
+# ------------------------------------------------------------
+#  Beleuchtung
+#  modus: dpi_atmen | zyklus_atmen | dauerlicht | tastenreaktion | aus | einzel_atmen
+# ------------------------------------------------------------
+[beleuchtung]
+modus = "zyklus_atmen"
+helligkeit = 4              # 0–7
+geschwindigkeit = 3         # 0–7 (kleiner = schneller)
+
+# ------------------------------------------------------------
+#  Die 8 Tasten. Namen frei wählbar, `steckplatz` = Position in der Firmware.
+#  Reihenfolge wie im Original-Programm (K1 … K8).
+# ------------------------------------------------------------
+[[taste]]
+name = "t1"
+steckplatz = 7
+
+[[taste]]
+name = "t2"
+steckplatz = 3
+
+[[taste]]
+name = "t3"
+steckplatz = 2
+
+[[taste]]
+name = "t4"
+steckplatz = 1
+
+[[taste]]
+name = "t5"
+steckplatz = 9
+
+[[taste]]
+name = "t6"
+steckplatz = 6
+
+[[taste]]
+name = "t7"
+steckplatz = 5
+
+[[taste]]
+name = "t8"
+steckplatz = 4
+
+# ------------------------------------------------------------
+#  Profile 1–3
+#    taste:<name>    eine Tastaturtaste, z. B. taste:a  taste:f13  taste:eingabe
+#    medien:<name>   z. B. medien:lauter  medien:abspielen
+#    profil_1 …      zu einem anderen Profil wechseln
+# ------------------------------------------------------------
+
+# Profil 1: Ziffern 1–8 (Werkseinstellung)
+[[profil]]
+name = "Ziffern"
+
+[profil.belegung]
+t1 = "taste:1"
+t2 = "taste:2"
+t3 = "taste:3"
+t4 = "taste:4"
+t5 = "taste:5"
+t6 = "taste:6"
+t7 = "taste:7"
+t8 = "taste:8"
+
+# Profil 2: Medien
+[[profil]]
+name = "Medien"
+
+[profil.belegung]
+t1 = "medien:abspielen"
+t2 = "medien:zurueck"
+t3 = "medien:weiter"
+t4 = "medien:stumm"
+t5 = "medien:leiser"
+t6 = "medien:lauter"
+t7 = "medien:rechner"
+t8 = "profil_1"
+
+# Profil 3: F13–F20 (frei in Programmen belegbar)
+[[profil]]
+name = "Makrotasten"
+
+[profil.belegung]
+t1 = "taste:f13"
+t2 = "taste:f14"
+t3 = "taste:f15"
+t4 = "taste:f16"
+t5 = "taste:f17"
+t6 = "taste:f18"
+t7 = "taste:f19"
+t8 = "taste:f20"
